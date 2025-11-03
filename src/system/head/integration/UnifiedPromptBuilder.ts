@@ -245,6 +245,87 @@ export class UnifiedPromptBuilder {
       }
     }
 
+    // Energy / Biometrics
+    if (user.energy && user.energy.hasData) {
+      parts.push('\n### ÉNERGIE & BIOMÉTRIE');
+      if (user.energy.hasWearableConnected) {
+        parts.push(`Wearable connecté: ${user.energy.connectedDevices[0]?.deviceName || 'Oui'}`);
+      }
+      if (user.energy.biometrics.hrResting) {
+        parts.push(`FC repos: ${user.energy.biometrics.hrResting} bpm`);
+      }
+      if (user.energy.biometrics.hrMax) {
+        parts.push(`FC max: ${user.energy.biometrics.hrMax} bpm`);
+      }
+      if (user.energy.biometrics.hrvAvg) {
+        parts.push(`HRV moyen: ${user.energy.biometrics.hrvAvg} ms`);
+      }
+      if (user.energy.biometrics.vo2maxEstimated) {
+        parts.push(`VO2max estimé: ${user.energy.biometrics.vo2maxEstimated} ml/kg/min`);
+      }
+      parts.push(`Score récupération: ${user.energy.recoveryScore}/100`);
+      parts.push(`Score fatigue: ${user.energy.fatigueScore}/100`);
+      if (user.energy.trainingLoad7d > 0) {
+        const loadStatus = user.energy.trainingLoad7d > 2000 ? 'élevée' :
+                          user.energy.trainingLoad7d > 1000 ? 'modérée' : 'légère';
+        parts.push(`Charge d'entraînement 7j: ${user.energy.trainingLoad7d} (${loadStatus})`);
+      }
+      if (user.energy.recentActivities.length > 0) {
+        parts.push(`Activités récentes: ${user.energy.recentActivities.length} enregistrées`);
+      }
+    }
+
+    // Temporal / Planning
+    if (user.temporal && user.temporal.hasData) {
+      parts.push('\n### PATTERNS TEMPORELS');
+      if (user.temporal.weeklyFrequency > 0) {
+        parts.push(`Fréquence hebdomadaire: ${user.temporal.weeklyFrequency} séances/semaine`);
+      }
+      if (user.temporal.preferredTimeOfDay) {
+        const timeMap = { morning: 'matin', afternoon: 'après-midi', evening: 'soir' };
+        parts.push(`Horaire préféré: ${timeMap[user.temporal.preferredTimeOfDay]}`);
+      }
+      if (user.temporal.averageSessionDuration > 0) {
+        parts.push(`Durée moyenne séance: ${user.temporal.averageSessionDuration} min`);
+      }
+      if (user.temporal.consistencyScore > 0) {
+        const consistencyText = user.temporal.consistencyScore >= 70 ? 'excellente' :
+                                user.temporal.consistencyScore >= 50 ? 'bonne' : 'à améliorer';
+        parts.push(`Consistance: ${user.temporal.consistencyScore}/100 (${consistencyText})`);
+      }
+      if (user.temporal.trainingPatterns.length > 0) {
+        const topPattern = user.temporal.trainingPatterns[0];
+        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const timeMap = { morning: 'matin', afternoon: 'après-midi', evening: 'soir' };
+        parts.push(`Pattern principal: ${dayNames[topPattern.dayOfWeek]} ${timeMap[topPattern.timeOfDay]} (${topPattern.frequency}x)`);
+      }
+      if (user.temporal.restDayPatterns.preferredRestDays.length > 0) {
+        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const restDays = user.temporal.restDayPatterns.preferredRestDays
+          .map(d => dayNames[d])
+          .join(', ');
+        parts.push(`Jours de repos préférés: ${restDays}`);
+      }
+    }
+
+    // Enhanced Nutrition with Fridge & Culinary
+    if (user.nutrition && user.nutrition.fridgeInventory && user.nutrition.fridgeInventory.length > 0) {
+      parts.push('\n### CUISINE & FRIGO');
+      parts.push(`Inventaire frigo: ${user.nutrition.fridgeInventory.length} items`);
+      if (user.nutrition.lastFridgeScanDate) {
+        const scanDate = new Date(user.nutrition.lastFridgeScanDate).toLocaleDateString('fr-FR');
+        parts.push(`Dernier scan: ${scanDate}`);
+      }
+      if (user.nutrition.generatedRecipes.length > 0) {
+        parts.push(`Recettes générées: ${user.nutrition.generatedRecipes.length}`);
+      }
+      if (user.nutrition.culinaryPreferences.favoriteCuisines.length > 0) {
+        parts.push(`Cuisines préférées: ${user.nutrition.culinaryPreferences.favoriteCuisines.join(', ')}`);
+      }
+      parts.push(`Niveau cuisine: ${user.nutrition.culinaryPreferences.cookingSkillLevel}`);
+      parts.push(`Temps préparation: ${user.nutrition.culinaryPreferences.mealPrepTime.weekday}min (semaine), ${user.nutrition.culinaryPreferences.mealPrepTime.weekend}min (week-end)`);
+    }
+
     return parts.join('\n');
   }
 

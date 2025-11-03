@@ -1,4 +1,4 @@
-export function DailyRecapSkeleton() {
+function DailyRecapSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
       <div className="h-32 bg-gray-200 rounded-lg"></div>
@@ -7,3 +7,5 @@ export function DailyRecapSkeleton() {
     </div>
   );
 }
+
+export default DailyRecapSkeleton;

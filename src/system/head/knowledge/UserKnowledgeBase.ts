@@ -14,6 +14,8 @@ import type {
   NutritionKnowledge,
   FastingKnowledge,
   BodyScanKnowledge,
+  EnergyKnowledge,
+  TemporalKnowledge,
   ForgeType
 } from '../types';
 import type { CacheManager } from '../core/CacheManager';
@@ -22,6 +24,8 @@ import { EquipmentDataCollector } from './collectors/EquipmentDataCollector';
 import { NutritionDataCollector } from './collectors/NutritionDataCollector';
 import { FastingDataCollector } from './collectors/FastingDataCollector';
 import { BodyScanDataCollector } from './collectors/BodyScanDataCollector';
+import { EnergyDataCollector } from './collectors/EnergyDataCollector';
+import { TemporalDataCollector } from './collectors/TemporalDataCollector';
 import { TodayDataCollector, type TodayData } from './collectors/TodayDataCollector';
 
 export class UserKnowledgeBase {
@@ -34,6 +38,8 @@ export class UserKnowledgeBase {
   private nutritionCollector: NutritionDataCollector;
   private fastingCollector: FastingDataCollector;
   private bodyScanCollector: BodyScanDataCollector;
+  private energyCollector: EnergyDataCollector;
+  private temporalCollector: TemporalDataCollector;
   private todayCollector: TodayDataCollector;
   private todayData: TodayData | null = null;
 
@@ -45,6 +51,8 @@ export class UserKnowledgeBase {
     this.nutritionCollector = new NutritionDataCollector(supabase);
     this.fastingCollector = new FastingDataCollector(supabase);
     this.bodyScanCollector = new BodyScanDataCollector(supabase);
+    this.energyCollector = new EnergyDataCollector(supabase);
+    this.temporalCollector = new TemporalDataCollector(supabase);
     this.todayCollector = new TodayDataCollector(supabase);
   }
 
@@ -75,6 +83,8 @@ export class UserKnowledgeBase {
         this.nutritionCollector.collect(userId),
         this.fastingCollector.collect(userId),
         this.bodyScanCollector.collect(userId),
+        this.energyCollector.collect(userId),
+        this.temporalCollector.collect(userId),
         this.todayCollector.collect(userId)
       ]);
 
@@ -102,8 +112,16 @@ export class UserKnowledgeBase {
         ? results[5].value
         : this.getDefaultBodyScanKnowledge();
 
-      this.todayData = results[6].status === 'fulfilled'
+      const energy = results[6].status === 'fulfilled'
         ? results[6].value
+        : this.getDefaultEnergyKnowledge();
+
+      const temporal = results[7].status === 'fulfilled'
+        ? results[7].value
+        : this.getDefaultTemporalKnowledge();
+
+      this.todayData = results[8].status === 'fulfilled'
+        ? results[8].value
         : null;
 
       // Log any failures
@@ -114,7 +132,9 @@ export class UserKnowledgeBase {
         { index: 3, name: 'nutrition' },
         { index: 4, name: 'fasting' },
         { index: 5, name: 'bodyScan' },
-        { index: 6, name: 'today' }
+        { index: 6, name: 'energy' },
+        { index: 7, name: 'temporal' },
+        { index: 8, name: 'today' }
       ];
 
       failures.forEach(({ index, name }) => {
@@ -134,19 +154,25 @@ export class UserKnowledgeBase {
         nutrition,
         fasting,
         bodyScan,
+        energy,
+        temporal,
         lastUpdated: {
           training: Date.now(),
           equipment: Date.now(),
           nutrition: Date.now(),
           fasting: Date.now(),
-          'body-scan': Date.now()
+          'body-scan': Date.now(),
+          energy: Date.now(),
+          temporal: Date.now()
         },
         completeness: {
           training: this.calculateCompleteness(training),
           equipment: this.calculateCompleteness(equipment),
           nutrition: this.calculateCompleteness(nutrition),
           fasting: this.calculateCompleteness(fasting),
-          'body-scan': this.calculateCompleteness(bodyScan)
+          'body-scan': this.calculateCompleteness(bodyScan),
+          energy: this.calculateCompleteness(energy),
+          temporal: this.calculateCompleteness(temporal)
         }
       };
 
@@ -164,6 +190,8 @@ export class UserKnowledgeBase {
         nutritionCompleteness: knowledge.completeness.nutrition,
         fastingCompleteness: knowledge.completeness.fasting,
         bodyScanCompleteness: knowledge.completeness['body-scan'],
+        energyCompleteness: knowledge.completeness.energy,
+        temporalCompleteness: knowledge.completeness.temporal,
         todayActivities: this.todayData?.totalActivities || 0
       });
 
@@ -241,6 +269,20 @@ export class UserKnowledgeBase {
         this.currentKnowledge.lastUpdated['body-scan'] = Date.now();
         this.currentKnowledge.completeness['body-scan'] = this.calculateCompleteness(
           this.currentKnowledge.bodyScan
+        );
+        break;
+      case 'energy':
+        this.currentKnowledge.energy = await this.energyCollector.collect(userId);
+        this.currentKnowledge.lastUpdated.energy = Date.now();
+        this.currentKnowledge.completeness.energy = this.calculateCompleteness(
+          this.currentKnowledge.energy
+        );
+        break;
+      case 'temporal':
+        this.currentKnowledge.temporal = await this.temporalCollector.collect(userId);
+        this.currentKnowledge.lastUpdated.temporal = Date.now();
+        this.currentKnowledge.completeness.temporal = this.calculateCompleteness(
+          this.currentKnowledge.temporal
         );
         break;
       default:
@@ -411,6 +453,14 @@ export class UserKnowledgeBase {
       averageCalories: 0,
       averageProtein: 0,
       dietaryPreferences: [],
+      fridgeInventory: [],
+      generatedRecipes: [],
+      lastFridgeScanDate: null,
+      culinaryPreferences: {
+        favoriteCuisines: [],
+        cookingSkillLevel: 'intermediate',
+        mealPrepTime: { weekday: 30, weekend: 60 }
+      },
       hasData: false
     };
   }
@@ -439,6 +489,49 @@ export class UserKnowledgeBase {
       lastScanDate: null,
       latestMeasurements: null,
       progressionTrend: null,
+      hasData: false
+    };
+  }
+
+  /**
+   * Get default energy knowledge when loading fails
+   */
+  private getDefaultEnergyKnowledge(): EnergyKnowledge {
+    return {
+      recentActivities: [],
+      connectedDevices: [],
+      hasWearableConnected: false,
+      biometrics: {
+        hrResting: null,
+        hrMax: null,
+        hrAvg: null,
+        hrvAvg: null,
+        vo2maxEstimated: null
+      },
+      recoveryScore: 50,
+      fatigueScore: 50,
+      trainingLoad7d: 0,
+      lastActivityDate: null,
+      hasData: false
+    };
+  }
+
+  /**
+   * Get default temporal knowledge when loading fails
+   */
+  private getDefaultTemporalKnowledge(): TemporalKnowledge {
+    return {
+      trainingPatterns: [],
+      availabilityWindows: [],
+      optimalTrainingTimes: [],
+      restDayPatterns: {
+        preferredRestDays: [],
+        averageRestDaysBetweenSessions: 0
+      },
+      weeklyFrequency: 0,
+      preferredTimeOfDay: null,
+      averageSessionDuration: 0,
+      consistencyScore: 0,
       hasData: false
     };
   }
