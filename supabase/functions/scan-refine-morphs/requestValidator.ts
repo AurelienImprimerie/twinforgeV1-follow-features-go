@@ -39,10 +39,12 @@ export function validateRefineRequest(request: any): string | null {
     user_measurements
   } = request;
 
-  // Validate scan_id (UUID)
-  const scanIdResult = validateUserId(scan_id, { required: true });
-  if (!scanIdResult.isValid) {
-    return `Scan ID: ${scanIdResult.error}`;
+  // Validate scan_id (can be client-generated nanoid or UUID)
+  if (!scan_id || typeof scan_id !== 'string' || scan_id.trim().length === 0) {
+    return 'Scan ID is required and must be a non-empty string';
+  }
+  if (scan_id.length > 100) {
+    return 'Scan ID exceeds maximum length';
   }
 
   // Validate user_id (UUID)
@@ -200,13 +202,12 @@ export function sanitizeRefineRequest(request: any): {
   user_measurements?: any;
 } {
   // Validation should be done first with validateRefineRequest()
-  const scanIdResult = validateUserId(request.scan_id, { required: true });
   const userIdResult = validateUserId(request.user_id, { required: true });
   const shapeParamsResult = validateShapeParams(request.blend_shape_params);
   const limbMassesResult = validateLimbMasses(request.blend_limb_masses);
 
   return {
-    scan_id: scanIdResult.sanitizedValue as string,
+    scan_id: request.scan_id.trim(), // scan_id can be nanoid or UUID, just trim it
     user_id: userIdResult.sanitizedValue as string,
     resolvedGender: request.resolvedGender,
     photos: request.photos,
