@@ -12,6 +12,13 @@ interface ProjectionControlsProps {
   warnings: string[];
   fatChange: number;
   muscleChange: number;
+  projectionResult?: {
+    estimatedBodyFatPercent?: number;
+    estimatedWaistReductionCm?: number;
+    estimatedLeanMassGainKg?: number;
+    healthRiskReduction?: string;
+    metabolicImprovementPercent?: number;
+  };
 }
 
 const NUTRITION_LABELS: Record<NutritionQuality, { label: string; icon: keyof typeof ICONS; color: string }> = {
@@ -42,7 +49,8 @@ const ProjectionControls: React.FC<ProjectionControlsProps> = ({
   onParamsChange,
   warnings,
   fatChange,
-  muscleChange
+  muscleChange,
+  projectionResult
 }) => {
   const { click } = useFeedback();
 
@@ -261,21 +269,88 @@ const ProjectionControls: React.FC<ProjectionControlsProps> = ({
         </div>
       </div>
 
+      {/* Métriques motivantes */}
+      {projectionResult && (
+        <div className="space-y-3 mt-4">
+          {projectionResult.estimatedBodyFatPercent !== undefined && (
+            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-400/20">
+              <div className="flex items-center justify-between">
+                <span className="text-white/80 text-sm">% Graisse corporelle estimé</span>
+                <span className="text-purple-300 font-bold text-lg">
+                  {projectionResult.estimatedBodyFatPercent}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {projectionResult.estimatedWaistReductionCm !== undefined && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+              <div className="flex items-center justify-between">
+                <span className="text-white/80 text-sm">📏 Réduction tour de taille</span>
+                <span className="text-emerald-300 font-bold text-lg">
+                  -{projectionResult.estimatedWaistReductionCm} cm
+                </span>
+              </div>
+            </div>
+          )}
+
+          {projectionResult.estimatedLeanMassGainKg !== undefined && (
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-400/20">
+              <div className="flex items-center justify-between">
+                <span className="text-white/80 text-sm">💪 Gain masse maigre</span>
+                <span className="text-blue-300 font-bold text-lg">
+                  {projectionResult.estimatedLeanMassGainKg > 0 ? '+' : ''}{projectionResult.estimatedLeanMassGainKg} kg
+                </span>
+              </div>
+            </div>
+          )}
+
+          {projectionResult.healthRiskReduction && (
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-400/20">
+              <div className="flex items-start gap-2">
+                <SpatialIcon Icon={ICONS.Heart} size={16} className="text-green-400 mt-0.5" />
+                <div>
+                  <div className="text-white/80 text-sm font-medium mb-1">Santé cardiovasculaire</div>
+                  <div className="text-green-300 text-sm">{projectionResult.healthRiskReduction}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {projectionResult.metabolicImprovementPercent !== undefined && (
+            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-400/20">
+              <div className="flex items-center justify-between">
+                <span className="text-white/80 text-sm">🔥 Amélioration métabolique</span>
+                <span className="text-orange-300 font-bold text-lg">
+                  {projectionResult.metabolicImprovementPercent > 0 ? '+' : ''}{projectionResult.metabolicImprovementPercent}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Warnings */}
       {warnings.length > 0 && (
         <div
-          className="mt-4 p-3 rounded-xl"
+          className="mt-4 p-3 rounded-xl space-y-2"
           style={{
             background: 'linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05))',
             border: '1px solid rgba(234,179,8,0.3)'
           }}
         >
-          {warnings.map((warning, index) => (
-            <div key={index} className="flex items-start gap-2 text-yellow-400/90 text-sm">
-              <SpatialIcon Icon={ICONS.AlertTriangle} size={14} className="mt-0.5 flex-shrink-0" />
-              <span>{warning}</span>
-            </div>
-          ))}
+          {warnings.map((warning, index) => {
+            const isPositive = warning.includes('🎯') || warning.includes('💪') || warning.includes('✨') || warning.includes('🔥') || warning.includes('⚡');
+            const iconToUse = isPositive ? ICONS.CheckCircle : ICONS.Info;
+            const color = isPositive ? 'text-emerald-400/90' : 'text-yellow-400/90';
+
+            return (
+              <div key={index} className={`flex items-start gap-2 ${color} text-sm`}>
+                <SpatialIcon Icon={iconToUse} size={14} className="mt-0.5 flex-shrink-0" />
+                <span>{warning}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </GlassCard>

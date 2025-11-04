@@ -257,6 +257,13 @@ const ProjectionTab: React.FC = () => {
         warnings={projectionResult?.warnings || []}
         fatChange={fatChange}
         muscleChange={muscleChange}
+        projectionResult={projectionResult ? {
+          estimatedBodyFatPercent: projectionResult.estimatedBodyFatPercent,
+          estimatedWaistReductionCm: projectionResult.estimatedWaistReductionCm,
+          estimatedLeanMassGainKg: projectionResult.estimatedLeanMassGainKg,
+          healthRiskReduction: projectionResult.healthRiskReduction,
+          metabolicImprovementPercent: projectionResult.metabolicImprovementPercent,
+        } : undefined}
       />
 
       {/* 3D Viewer avec projection */}
