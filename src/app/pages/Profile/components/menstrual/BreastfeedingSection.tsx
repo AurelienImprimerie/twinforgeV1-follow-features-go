@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../../../../../ui/cards/GlassCard';
+import { SectionSaveButton } from '../../components/ProfileHealthComponents';
 import { getBreastfeedingEmoji, getBreastfeedingTypeLabel, getBabyAgeCategory } from '../../../../../domain/breastfeeding';
 import type { BreastfeedingType } from '../../../../../domain/breastfeeding';
 
@@ -12,14 +13,41 @@ interface BreastfeedingSectionProps {
     notes: string;
   };
   onChange: (value: Partial<BreastfeedingSectionProps['value']>) => void;
+  onSave: () => Promise<void>;
+  isSaving: boolean;
   errors?: Record<string, string>;
 }
 
 const BreastfeedingSection: React.FC<BreastfeedingSectionProps> = ({
   value,
   onChange,
+  onSave,
+  isSaving,
   errors = {},
 }) => {
+  const [initialValue, setInitialValue] = useState(value);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    setInitialValue(value);
+  }, []);
+
+  useEffect(() => {
+    const hasChanges =
+      value.is_breastfeeding !== initialValue.is_breastfeeding ||
+      value.breastfeeding_type !== initialValue.breastfeeding_type ||
+      value.baby_age_months !== initialValue.baby_age_months ||
+      value.start_date !== initialValue.start_date ||
+      value.notes !== initialValue.notes;
+    setIsDirty(hasChanges);
+  }, [value, initialValue]);
+
+  const handleSave = async () => {
+    await onSave();
+    setInitialValue(value);
+    setIsDirty(false);
+  };
+
   const isBreastfeeding = value.is_breastfeeding;
 
   return (
@@ -72,7 +100,7 @@ const BreastfeedingSection: React.FC<BreastfeedingSectionProps> = ({
                 </label>
                 <select
                   value={value.breastfeeding_type || ''}
-                  onChange={(e) => onChange({ breastfeeding_type: e.target.value as BreastfeedingType || null })}
+                  onChange={(e) => onChange({ breastfeeding_type: (e.target.value || null) as BreastfeedingType | null })}
                   className="w-full px-4 py-3 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
@@ -106,7 +134,7 @@ const BreastfeedingSection: React.FC<BreastfeedingSectionProps> = ({
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                   }}
                 />
-                {value.baby_age_months && (
+                {value.baby_age_months && !isNaN(parseInt(value.baby_age_months)) && (
                   <p className="text-white/60 text-sm mt-1">
                     {getBabyAgeCategory(parseInt(value.baby_age_months))}
                   </p>
@@ -162,6 +190,13 @@ const BreastfeedingSection: React.FC<BreastfeedingSectionProps> = ({
           </div>
         )}
       </div>
+
+      <SectionSaveButton
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onSave={handleSave}
+        sectionName="Allaitement"
+      />
     </GlassCard>
   );
 };

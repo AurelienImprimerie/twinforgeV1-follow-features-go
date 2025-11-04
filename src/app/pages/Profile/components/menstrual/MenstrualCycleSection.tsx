@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../../ui/icons/registry';
+import { SectionSaveButton } from '../../components/ProfileHealthComponents';
 
 interface MenstrualCycleSectionProps {
   value: {
@@ -10,19 +11,44 @@ interface MenstrualCycleSectionProps {
     averagePeriodDuration: number;
   };
   onChange: (value: any) => void;
+  onSave: () => Promise<void>;
+  isSaving: boolean;
   errors?: Record<string, string>;
 }
 
 const MenstrualCycleSection: React.FC<MenstrualCycleSectionProps> = ({
   value,
   onChange,
+  onSave,
+  isSaving,
   errors = {},
 }) => {
+  const [initialValue, setInitialValue] = useState(value);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    setInitialValue(value);
+  }, []);
+
+  useEffect(() => {
+    const hasChanges =
+      value.lastPeriodDate !== initialValue.lastPeriodDate ||
+      value.averageCycleLength !== initialValue.averageCycleLength ||
+      value.averagePeriodDuration !== initialValue.averagePeriodDuration;
+    setIsDirty(hasChanges);
+  }, [value, initialValue]);
+
   const handleChange = (field: string, fieldValue: string | number) => {
     onChange({
       ...value,
       [field]: fieldValue,
     });
+  };
+
+  const handleSave = async () => {
+    await onSave();
+    setInitialValue(value);
+    setIsDirty(false);
   };
 
   return (
@@ -115,6 +141,13 @@ const MenstrualCycleSection: React.FC<MenstrualCycleSectionProps> = ({
           )}
         </div>
       </div>
+
+      <SectionSaveButton
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onSave={handleSave}
+        sectionName="Cycle"
+      />
     </GlassCard>
   );
 };

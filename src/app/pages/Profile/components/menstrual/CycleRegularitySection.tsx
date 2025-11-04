@@ -1,24 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../../ui/icons/registry';
+import { SectionSaveButton } from '../../components/ProfileHealthComponents';
 
 interface CycleRegularitySectionProps {
   value: {
     cycleRegularity: 'regular' | 'irregular' | 'very_irregular';
   };
   onChange: (value: any) => void;
+  onSave: () => Promise<void>;
+  isSaving: boolean;
 }
 
 const CycleRegularitySection: React.FC<CycleRegularitySectionProps> = ({
   value,
   onChange,
+  onSave,
+  isSaving,
 }) => {
+  const [initialValue, setInitialValue] = useState(value);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    setInitialValue(value);
+  }, []);
+
+  useEffect(() => {
+    setIsDirty(value.cycleRegularity !== initialValue.cycleRegularity);
+  }, [value, initialValue]);
+
   const handleChange = (field: string, fieldValue: any) => {
     onChange({
       ...value,
       [field]: fieldValue,
     });
+  };
+
+  const handleSave = async () => {
+    await onSave();
+    setInitialValue(value);
+    setIsDirty(false);
   };
 
   const regularityOptions = [
@@ -96,6 +118,13 @@ const CycleRegularitySection: React.FC<CycleRegularitySectionProps> = ({
           </div>
         </div>
       </div>
+
+      <SectionSaveButton
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onSave={handleSave}
+        sectionName="Régularité"
+      />
     </GlassCard>
   );
 };

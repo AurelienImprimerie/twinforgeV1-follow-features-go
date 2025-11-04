@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../../ui/icons/registry';
+import { SectionSaveButton } from '../../components/ProfileHealthComponents';
 import type { ReproductiveStatus, PerimenopauseStage } from '../../../../../domain/menopause';
 
 interface MenopauseDetailsSectionProps {
@@ -16,6 +17,8 @@ interface MenopauseDetailsSectionProps {
     notes: string;
   };
   onChange: (value: any) => void;
+  onSave: () => Promise<void>;
+  isSaving: boolean;
   errors?: Record<string, string>;
 }
 
@@ -23,8 +26,35 @@ const MenopauseDetailsSection: React.FC<MenopauseDetailsSectionProps> = ({
   status,
   value,
   onChange,
+  onSave,
+  isSaving,
   errors = {},
 }) => {
+  const [initialValue, setInitialValue] = useState(value);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    setInitialValue(value);
+  }, []);
+
+  useEffect(() => {
+    const hasChanges =
+      value.perimenopause_stage !== initialValue.perimenopause_stage ||
+      value.last_period_date !== initialValue.last_period_date ||
+      value.menopause_confirmation_date !== initialValue.menopause_confirmation_date ||
+      value.fsh_level !== initialValue.fsh_level ||
+      value.estrogen_level !== initialValue.estrogen_level ||
+      value.last_hormone_test_date !== initialValue.last_hormone_test_date ||
+      value.notes !== initialValue.notes;
+    setIsDirty(hasChanges);
+  }, [value, initialValue]);
+
+  const handleSave = async () => {
+    await onSave();
+    setInitialValue(value);
+    setIsDirty(false);
+  };
+
   if (status === 'menstruating') {
     return null;
   }
@@ -193,6 +223,13 @@ const MenopauseDetailsSection: React.FC<MenopauseDetailsSectionProps> = ({
           />
         </div>
       </div>
+
+      <SectionSaveButton
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onSave={handleSave}
+        sectionName="Détails"
+      />
     </GlassCard>
   );
 };

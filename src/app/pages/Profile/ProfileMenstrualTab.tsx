@@ -12,7 +12,6 @@ import { useMenopauseForm } from './hooks/useMenopauseForm';
 import { useBreastfeedingForm } from './hooks/useBreastfeedingForm';
 import GlassCard from '../../../ui/cards/GlassCard';
 import { ProgressBar } from './components/ProfileIdentityComponents';
-import UnsavedChangesIndicator from '../../../ui/components/UnsavedChangesIndicator';
 import { calculateMenstrualCompletion } from './utils/profileCompletion';
 
 const ProfileMenstrualTab: React.FC = () => {
@@ -22,9 +21,7 @@ const ProfileMenstrualTab: React.FC = () => {
 
   const isMenstruating = menopauseForm.formData.reproductive_status === 'menstruating';
   const isLoading = menstrualForm.isLoading || menopauseForm.isLoading || breastfeedingForm.isLoading;
-  const isSaving = menstrualForm.isSaving || menopauseForm.isSaving || breastfeedingForm.isSaving;
 
-  // Calculate completion percentage based on active form
   const completionPercentage = useMemo(() => {
     if (isMenstruating) {
       return calculateMenstrualCompletion(menstrualForm.formData);
@@ -32,32 +29,6 @@ const ProfileMenstrualTab: React.FC = () => {
     const fields = Object.values(menopauseForm.formData).filter(v => v !== null && v !== '');
     return Math.round((fields.length / 8) * 100);
   }, [isMenstruating, menstrualForm.formData, menopauseForm.formData]);
-
-  // Track if form is dirty (has unsaved changes)
-  const [isDirty, setIsDirty] = React.useState(false);
-
-  // Update dirty state when form data changes
-  React.useEffect(() => {
-    setIsDirty(true);
-  }, [menstrualForm.formData, menopauseForm.formData]);
-
-  // Reset dirty state after successful save
-  const handleSaveWithReset = async () => {
-    try {
-      if (isMenstruating) {
-        await menstrualForm.handleSave();
-      } else {
-        await menopauseForm.handleSave();
-      }
-      await breastfeedingForm.handleSave();
-      setIsDirty(false);
-    } catch (error) {
-      console.error('Error saving profile data:', error);
-    }
-  };
-
-  const errors = isMenstruating ? menstrualForm.errors : menopauseForm.errors;
-  const activeFormData = isMenstruating ? menstrualForm.formData : menopauseForm.formData;
 
   if (isLoading) {
     return (
@@ -69,16 +40,6 @@ const ProfileMenstrualTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Unsaved Changes Indicator */}
-      <UnsavedChangesIndicator
-        isDirty={isDirty}
-        onSave={handleSaveWithReset}
-        isSaving={isSaving}
-        isValid={Object.keys(errors).length === 0}
-        modifiedFieldsCount={Object.keys(activeFormData).filter(key => activeFormData[key as keyof typeof activeFormData] !== null && activeFormData[key as keyof typeof activeFormData] !== '').length}
-      />
-
-      {/* Enhanced Progress Header */}
       <ProgressBar
         percentage={completionPercentage}
         title={isMenstruating ? "Cycle Menstruel" : "Santé Reproductive"}
@@ -86,16 +47,13 @@ const ProfileMenstrualTab: React.FC = () => {
         color={isMenstruating ? "#EC4899" : "#F59E0B"}
       />
 
-      {/* Reproductive Status Selector */}
       <ReproductiveStatusSelector
         value={menopauseForm.formData.reproductive_status}
-        onChange={(status) => {
-          menopauseForm.updateFormData({ reproductive_status: status });
-          setIsDirty(true);
-        }}
+        onChange={menopauseForm.updateFormData}
+        onSave={menopauseForm.handleSave}
+        isSaving={menopauseForm.isSaving}
       />
 
-      {/* Info Card - Conditional based on status */}
       {isMenstruating ? (
         menstrualForm.formData.lastPeriodDate && (
           <CurrentCycleInfoCard
@@ -112,7 +70,6 @@ const ProfileMenstrualTab: React.FC = () => {
         />
       )}
 
-      {/* Form Sections - Conditional based on status */}
       {isMenstruating ? (
         <>
           <MenstrualCycleSection
@@ -121,7 +78,9 @@ const ProfileMenstrualTab: React.FC = () => {
               averageCycleLength: menstrualForm.formData.averageCycleLength,
               averagePeriodDuration: menstrualForm.formData.averagePeriodDuration,
             }}
-            onChange={(value) => menstrualForm.updateFormData(value)}
+            onChange={menstrualForm.updateFormData}
+            onSave={menstrualForm.handleSave}
+            isSaving={menstrualForm.isSaving}
             errors={menstrualForm.errors}
           />
 
@@ -129,7 +88,9 @@ const ProfileMenstrualTab: React.FC = () => {
             value={{
               cycleRegularity: menstrualForm.formData.cycleRegularity,
             }}
-            onChange={(value) => menstrualForm.updateFormData(value)}
+            onChange={menstrualForm.updateFormData}
+            onSave={menstrualForm.handleSave}
+            isSaving={menstrualForm.isSaving}
           />
         </>
       ) : (
@@ -144,12 +105,13 @@ const ProfileMenstrualTab: React.FC = () => {
             last_hormone_test_date: menopauseForm.formData.last_hormone_test_date,
             notes: menopauseForm.formData.notes,
           }}
-          onChange={(value) => menopauseForm.updateFormData(value)}
+          onChange={menopauseForm.updateFormData}
+          onSave={menopauseForm.handleSave}
+          isSaving={menopauseForm.isSaving}
           errors={menopauseForm.errors}
         />
       )}
 
-      {/* Breastfeeding Section - Available for all statuses */}
       <BreastfeedingSection
         value={{
           is_breastfeeding: breastfeedingForm.formData.is_breastfeeding,
@@ -158,21 +120,11 @@ const ProfileMenstrualTab: React.FC = () => {
           start_date: breastfeedingForm.formData.start_date,
           notes: breastfeedingForm.formData.notes,
         }}
-        onChange={(value) => breastfeedingForm.updateFormData(value)}
+        onChange={breastfeedingForm.updateFormData}
+        onSave={breastfeedingForm.handleSave}
+        isSaving={breastfeedingForm.isSaving}
         errors={breastfeedingForm.errors}
       />
-
-      <GlassCard variant="frosted" className="p-6">
-        <div className="space-y-2">
-          <h3 className="text-white font-medium flex items-center gap-2">
-            🔒 Confidentialité et sécurité
-          </h3>
-          <p className="text-sm text-white/60">
-            Vos données de santé reproductive sont strictement confidentielles et protégées par chiffrement.
-            Elles ne sont utilisées que pour personnaliser vos recommandations et ne sont jamais partagées.
-          </p>
-        </div>
-      </GlassCard>
 
       <GlassCard
         className="p-6"
@@ -243,6 +195,18 @@ const ProfileMenstrualTab: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard variant="frosted" className="p-6">
+        <div className="space-y-2">
+          <h3 className="text-white font-medium flex items-center gap-2">
+            🔒 Confidentialité et sécurité
+          </h3>
+          <p className="text-sm text-white/60">
+            Vos données de santé reproductive sont strictement confidentielles et protégées par chiffrement.
+            Elles ne sont utilisées que pour personnaliser vos recommandations et ne sont jamais partagées.
+          </p>
         </div>
       </GlassCard>
     </div>
