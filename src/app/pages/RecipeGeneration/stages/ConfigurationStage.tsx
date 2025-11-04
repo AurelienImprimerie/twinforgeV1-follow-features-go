@@ -228,55 +228,152 @@ const ConfigurationStage: React.FC<ConfigurationStageProps> = ({
         </GlassCard>
       </MotionDiv>
 
-      {/* Benefits Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          {
-            icon: ICONS.Sparkles,
-            title: 'IA Personnalisée',
-            description: 'Recettes adaptées à vos goûts et contraintes'
-          },
-          {
-            icon: ICONS.Clock,
-            title: 'Rapide',
-            description: 'Génération en quelques secondes'
-          },
-          {
-            icon: ICONS.Check,
-            title: 'Zéro Gaspillage',
-            description: 'Utilisez tous vos ingrédients disponibles'
-          }
-        ].map((benefit, index) => (
+      {/* Inventory Context Summary Cards */}
+      {selectedInventory && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Last Inventory Used */}
           <MotionDiv
-            key={index}
             {...(!isPerformanceMode && {
               initial: { opacity: 0, y: 20 },
               animate: { opacity: 1, y: 0 },
-              transition: { duration: 0.3, delay: 0.3 + index * 0.1 }
+              transition: { duration: 0.3, delay: 0.3 }
             })}
           >
             <GlassCard
-              className="p-4 text-center"
+              className="p-4"
               style={{
                 background: 'rgba(16, 185, 129, 0.05)',
                 borderColor: 'rgba(16, 185, 129, 0.2)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
               }}
             >
-              <SpatialIcon
-                Icon={benefit.icon}
-                size={32}
-                className="mx-auto mb-3 text-green-400"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.6))'
-                }}
-              />
-              <h3 className="text-white font-semibold mb-2">{benefit.title}</h3>
-              <p className="text-white/70 text-sm">{benefit.description}</p>
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <SpatialIcon
+                    Icon={ICONS.Calendar}
+                    size={20}
+                    className="text-green-400"
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))'
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-1 text-sm">Dernier Inventaire</h3>
+                  <p className="text-white/80 text-xs">
+                    Scanné le {new Date(selectedInventory.created_at).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-green-400 text-xs mt-1 font-medium">
+                    {selectedInventory.inventory_final.length} ingrédients détectés
+                  </p>
+                </div>
+              </div>
             </GlassCard>
           </MotionDiv>
-        ))}
-      </div>
+
+          {/* Ingredient Usage Encouragement */}
+          <MotionDiv
+            {...(!isPerformanceMode && {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              transition: { duration: 0.3, delay: 0.4 }
+            })}
+          >
+            <GlassCard
+              className="p-4"
+              style={{
+                background: 'rgba(16, 185, 129, 0.05)',
+                borderColor: 'rgba(16, 185, 129, 0.2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <SpatialIcon
+                    Icon={ICONS.Sparkles}
+                    size={20}
+                    className="text-green-400"
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))'
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-1 text-sm">Recettes Optimisées</h3>
+                  <p className="text-white/80 text-xs">
+                    La Forge créera {recipeCount} recettes basées sur vos ingrédients disponibles
+                  </p>
+                  <p className="text-green-400 text-xs mt-1 font-medium">
+                    Maximisation de l'utilisation
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+          </MotionDiv>
+
+          {/* Freshness Indicator */}
+          <MotionDiv
+            {...(!isPerformanceMode && {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              transition: { duration: 0.3, delay: 0.5 }
+            })}
+          >
+            <GlassCard
+              className="p-4"
+              style={{
+                background: 'rgba(16, 185, 129, 0.05)',
+                borderColor: 'rgba(16, 185, 129, 0.2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <SpatialIcon
+                    Icon={ICONS.Clock}
+                    size={20}
+                    className="text-green-400"
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))'
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-1 text-sm">Priorité Fraîcheur</h3>
+                  <p className="text-white/80 text-xs">
+                    Recettes priorisées pour utiliser les ingrédients les plus frais en premier
+                  </p>
+                  <p className="text-green-400 text-xs mt-1 font-medium">
+                    Zéro gaspillage alimentaire
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+          </MotionDiv>
+        </div>
+      )}
     </div>
   );
 };

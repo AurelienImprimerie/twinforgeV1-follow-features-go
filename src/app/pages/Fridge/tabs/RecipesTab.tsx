@@ -9,6 +9,7 @@ import { useToast } from '../../../../ui/components/ToastProvider';
 import { useFridgeScanPipeline } from '../../../../system/store/fridgeScan';
 import { useUserStore } from '../../../../system/store/userStore';
 import { useMealPlanStore } from '../../../../system/store/mealPlanStore';
+import { useRecipeGenerationPipeline } from '../../../../system/store/recipeGeneration';
 import type { Recipe } from '../../../../domain/recipe';
 import RecipeDetailModal from './RecipesTab/components/RecipeDetailModal';
 import RecipeCard from './RecipesTab/components/RecipeCard';
@@ -36,6 +37,29 @@ const RecipesTab: React.FC = () => {
   // User state
   const { session, profile } = useUserStore();
   const userId = session?.user?.id;
+
+  // Meal plan store for inventories
+  const { availableInventories, loadAvailableInventories } = useMealPlanStore();
+  const { startPipeline } = useRecipeGenerationPipeline();
+
+  // Load available inventories on mount
+  React.useEffect(() => {
+    if (userId) {
+      loadAvailableInventories();
+    }
+  }, [userId, loadAvailableInventories]);
+
+  // Check if we have any valid inventory
+  const hasValidInventory = availableInventories.some(
+    inv => inv.inventory_final && inv.inventory_final.length > 0
+  );
+
+  // Handle generate recipes action
+  const handleGenerateRecipes = () => {
+    click();
+    startPipeline();
+    navigate('/recipe-generation');
+  };
 
   // Custom hooks for modular functionality
   const {
@@ -171,7 +195,12 @@ const RecipesTab: React.FC = () => {
 
       {/* Contenu Principal */}
       {!hasRecipes && !isLoading ? (
-        <EmptyRecipesState />
+        <EmptyRecipesState
+          selectedInventoryId={availableInventories[0]?.id || null}
+          availableInventories={availableInventories}
+          hasSelectedInventory={hasValidInventory}
+          onGenerateRecipes={handleGenerateRecipes}
+        />
       ) : (
         <div className="space-y-4">
           {/* État de Chargement Initial */}
