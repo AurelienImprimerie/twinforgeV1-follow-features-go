@@ -7,15 +7,15 @@ import { openFoodFactsService } from '../../../../../system/services/openFoodFac
 
 /**
  * Convert File to Base64 for API transmission
+ * Returns full data URL format (data:image/jpeg;base64,...)
  */
 async function convertFileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove data URL prefix to get just the base64 data
-      const base64Data = result.split(',')[1];
-      resolve(base64Data);
+      // Keep the full data URL format for validation
+      resolve(result);
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
