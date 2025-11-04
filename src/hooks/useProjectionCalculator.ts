@@ -25,24 +25,23 @@ export interface ProjectionResult {
   metabolicImprovementPercent?: number;
 }
 
-// Multiplicateurs de durée optimisés pour motivation immédiate
-// Les courtes durées montrent maintenant des résultats visibles
+// Multiplicateurs de durée réalistes et cohérents
 const DURATION_MULTIPLIERS: Record<ProjectionDuration, number> = {
-  '3_months': 0.45,  // Augmenté de 0.25 pour motivation court terme
-  '6_months': 0.8,   // Augmenté de 0.5 pour meilleur gradient
-  '1_year': 1.0,     // Référence maintenue
-  '3_years': 3.2,    // Augmenté de 2.5 pour transformation dramatique
+  '3_months': 0.3,   // Réduction réaliste court terme
+  '6_months': 0.6,   // Progression modérée 6 mois
+  '1_year': 1.0,     // Référence
+  '3_years': 2.5,    // Transformation long terme réaliste
 };
 
-// Coefficients optimisés pour impact visible sur pearFigure (ventre/gras)
-const NUTRITION_BASE_COEFFICIENT = 0.5;  // Augmenté de 0.3
-const SPORT_BURN_COEFFICIENT = 0.3;      // Augmenté de 0.15
-const SPORT_MUSCLE_COEFFICIENT = 0.35;   // Augmenté de 0.25
-const NUTRITION_MUSCLE_COEFFICIENT = 0.15; // Augmenté de 0.1
+// Coefficients réalistes pour pearFigure (ventre/gras) et bodybuilderSize (muscle)
+const NUTRITION_BASE_COEFFICIENT = 0.35;  // Impact nutritionnel modéré
+const SPORT_BURN_COEFFICIENT = 0.2;       // Brûlage graisse réaliste
+const SPORT_MUSCLE_COEFFICIENT = 0.25;    // Développement musculaire progressif
+const NUTRITION_MUSCLE_COEFFICIENT = 0.12; // Support nutritionnel modéré
 
-// Bonus synergique quand nutrition ET sport sont excellents
+// Bonus synergique réduit pour plus de réalisme
 const SYNERGY_THRESHOLD = 4; // Niveau à partir duquel le bonus s'applique
-const SYNERGY_BONUS_MULTIPLIER = 1.3; // +30% d'efficacité
+const SYNERGY_BONUS_MULTIPLIER = 1.15; // +15% d'efficacité (au lieu de 30%)
 
 /**
  * Hook pour calculer les projections morphologiques basées sur nutrition, sport et durée
@@ -90,26 +89,26 @@ export function useProjectionCalculator(
 
       /**
        * CALCUL DE L'ÉVOLUTION DE LA MASSE GRASSE (pearFigure)
-       * Système optimisé pour motivation avec effets visibles
+       * Système réaliste et cohérent
        *
-       * Logique améliorée:
-       * - Nutrition excellente (5) + Sport intense (5) = transformation dramatique
-       * - Coefficients augmentés pour impact visible même à 3 mois
-       * - Bonus synergique quand nutrition ET sport sont tous deux élevés
+       * Logique:
+       * - Nutrition excellente (5) + Sport intense (5) = progression optimale réaliste
+       * - Coefficients modérés pour résultats cohérents sur toutes durées
+       * - Bonus synergique modéré (+15%) quand nutrition ET sport sont excellents
        * - Effet plateau réaliste quand on approche des limites basses
-       * - Bonus de motivation pour ceux qui partent d'un pearFigure élevé
+       * - Bonus léger pour ceux qui partent d'un pearFigure très élevé
        */
 
-      // Impact nutritionnel avec effet exponentiel pour nutrition excellente
+      // Impact nutritionnel progressif
       let nutritionImpact = (params.nutritionQuality - 3) * -NUTRITION_BASE_COEFFICIENT;
       if (params.nutritionQuality === 5) {
-        nutritionImpact *= 1.4; // Bonus 40% pour nutrition parfaite
+        nutritionImpact *= 1.2; // Bonus modéré 20% pour nutrition parfaite
       }
 
       // Impact sportif sur brûlage des graisses
       let sportBurnImpact = (params.sportIntensity - 1) * -SPORT_BURN_COEFFICIENT;
       if (params.sportIntensity === 5) {
-        sportBurnImpact *= 1.3; // Bonus 30% pour sport très intense
+        sportBurnImpact *= 1.15; // Bonus modéré 15% pour sport très intense
       }
 
       // Bonus synergique: quand nutrition ET sport sont excellents
@@ -117,11 +116,11 @@ export function useProjectionCalculator(
                          params.sportIntensity >= SYNERGY_THRESHOLD;
       const synergyMultiplier = hasSynergy ? SYNERGY_BONUS_MULTIPLIER : 1.0;
 
-      // Bonus de motivation pour ceux qui ont beaucoup de gras à perdre
-      const motivationBonus = basePearFigure > 1.0 ? 1.2 : 1.0;
+      // Bonus modéré pour ceux qui ont beaucoup de gras à perdre
+      const motivationBonus = basePearFigure > 1.5 ? 1.1 : 1.0;
 
       // Effet plateau: plus c'est bas, plus c'est difficile de perdre (réalisme)
-      const plateauFactor = basePearFigure < 0 ? 0.7 : 1.0;
+      const plateauFactor = basePearFigure < 0 ? 0.6 : 1.0;
 
       const totalFatChange = (
         (nutritionImpact + sportBurnImpact) *
@@ -135,32 +134,32 @@ export function useProjectionCalculator(
 
       /**
        * CALCUL DE L'ÉVOLUTION DE LA MASSE MUSCULAIRE (bodybuilderSize)
-       * Système optimisé pour gains musculaires visibles
+       * Système réaliste pour gains musculaires progressifs
        *
-       * Logique améliorée:
+       * Logique:
        * - Sport intense (5) + Nutrition excellente (5) = développement musculaire optimal
-       * - Coefficients augmentés pour progression visible
-       * - Bonus synergique pour combinaison sport + nutrition
+       * - Coefficients modérés pour progression réaliste
+       * - Bonus synergique léger (+10%) pour combinaison sport + nutrition
        * - Pénalité réaliste si nutrition insuffisante même avec sport intense
        */
 
       // Impact sportif sur développement musculaire
       let sportGainImpact = (params.sportIntensity - 3) * SPORT_MUSCLE_COEFFICIENT;
       if (params.sportIntensity === 5) {
-        sportGainImpact *= 1.25; // Bonus 25% pour sport très intense
+        sportGainImpact *= 1.15; // Bonus modéré 15% pour sport très intense
       }
 
       // Support nutritionnel pour récupération et croissance
       let nutritionSupportImpact = (params.nutritionQuality - 3) * NUTRITION_MUSCLE_COEFFICIENT;
       if (params.nutritionQuality === 5) {
-        nutritionSupportImpact *= 1.3; // Bonus 30% pour nutrition optimale
+        nutritionSupportImpact *= 1.15; // Bonus modéré 15% pour nutrition optimale
       }
 
       // Pénalité si sport intense mais nutrition mauvaise (catabolisme)
-      const nutritionPenalty = (params.sportIntensity >= 4 && params.nutritionQuality <= 2) ? 0.5 : 1.0;
+      const nutritionPenalty = (params.sportIntensity >= 4 && params.nutritionQuality <= 2) ? 0.6 : 1.0;
 
-      // Bonus synergie pour muscle aussi
-      const muscleSynergyMultiplier = hasSynergy ? 1.2 : 1.0;
+      // Bonus synergie modéré pour muscle
+      const muscleSynergyMultiplier = hasSynergy ? 1.1 : 1.0;
 
       const totalMuscleChange = (
         (sportGainImpact + nutritionSupportImpact) *
@@ -204,26 +203,28 @@ export function useProjectionCalculator(
         }
       }
 
-      // Warnings progressifs pour motivation
+      // Warnings progressifs réalistes pour motivation
       const fatReductionPercent = basePearFigure > 0
         ? Math.abs((projectedPearFigure - basePearFigure) / basePearFigure) * 100
         : 0;
 
-      if (fatReductionPercent > 30) {
+      if (fatReductionPercent > 40) {
         warnings.push('🔥 Transformation majeure ! Réduction de masse grasse de ' + fatReductionPercent.toFixed(0) + '%');
-      } else if (fatReductionPercent > 15) {
+      } else if (fatReductionPercent > 20) {
         warnings.push('✨ Excellente progression ! Réduction de ' + fatReductionPercent.toFixed(0) + '% de masse grasse');
+      } else if (fatReductionPercent > 10) {
+        warnings.push('💪 Bonne progression ! Réduction de ' + fatReductionPercent.toFixed(0) + '% de masse grasse');
       }
 
       // Warning si perte de muscle significative
       const muscleLoss = baseBodybuilderSize - projectedBodybuilderSize;
-      if (muscleLoss > 0.3) {
+      if (muscleLoss > 0.4) {
         warnings.push('⚠️ Attention: Perte musculaire détectée - Augmentez protéines et sport');
       }
 
       // Message motivant si synergy active
       if (hasSynergy) {
-        warnings.push('⚡ Synergie activée ! Nutrition et sport excellents = résultats optimaux (+30%)');
+        warnings.push('⚡ Synergie activée ! Nutrition et sport excellents = résultats optimaux (+15%)');
       }
 
       /**
@@ -244,20 +245,20 @@ export function useProjectionCalculator(
 
       /**
        * CALCUL DES MÉTRIQUES MOTIVANTES
-       * Conversion des valeurs morphologiques en métriques compréhensibles
+       * Conversion réaliste des valeurs morphologiques en métriques compréhensibles
        */
 
       // Estimation pourcentage de graisse corporelle basé sur pearFigure
-      // Formule: pearFigure de -0.5 (athlète) à 2.0 (obésité) → 8-35% graisse
-      const baseBodyFatPercent = 15 + (basePearFigure * 8); // Approximation
-      const projectedBodyFatPercent = 15 + (projectedPearFigure * 8);
+      // Formule réaliste: pearFigure de -0.5 (athlète) à 2.0 (obésité) → 10-30% graisse
+      const baseBodyFatPercent = 15 + (basePearFigure * 6); // Ratio réduit pour réalisme
+      const projectedBodyFatPercent = 15 + (projectedPearFigure * 6);
       const bodyFatChange = baseBodyFatPercent - projectedBodyFatPercent;
 
-      // Estimation réduction tour de taille (1 point pearFigure ≈ 8cm tour de taille)
-      const waistReductionCm = Math.abs(projectedPearFigure - basePearFigure) * 8;
+      // Estimation réduction tour de taille (1 point pearFigure ≈ 5cm tour de taille)
+      const waistReductionCm = Math.abs(projectedPearFigure - basePearFigure) * 5;
 
-      // Estimation gain masse maigre en kg (1 point bodybuilderSize ≈ 4kg muscle)
-      const leanMassGainKg = (projectedBodybuilderSize - baseBodybuilderSize) * 4;
+      // Estimation gain masse maigre en kg (1 point bodybuilderSize ≈ 3kg muscle)
+      const leanMassGainKg = (projectedBodybuilderSize - baseBodybuilderSize) * 3;
 
       // Évaluation risque santé basé sur pearFigure (ventre = facteur risque cardio)
       let healthRiskReduction = '';
@@ -272,10 +273,10 @@ export function useProjectionCalculator(
         healthRiskReduction = 'Attention - Augmentation du risque santé';
       }
 
-      // Amélioration métabolique estimée (base sur perte graisse et gain muscle)
+      // Amélioration métabolique estimée réaliste (base sur perte graisse et gain muscle)
       const metabolicImprovement = (
-        (bodyFatChange * 2) + // Perte graisse améliore métabolisme
-        (leanMassGainKg * 1.5) // Muscle augmente métabolisme basal
+        (bodyFatChange * 1.2) + // Perte graisse améliore métabolisme modérément
+        (leanMassGainKg * 1.0) // Muscle augmente métabolisme basal
       );
 
       logger.info('PROJECTION_CALCULATOR', 'Projection computed with metrics', {
