@@ -112,7 +112,8 @@ export function validateLimbMasses(
 
 /**
  * Validate K5 envelope (physiological constraints from database)
- * This is the output from morphology mapping, used as constraint
+ * CRITICAL: Trust database values - only validate structure, NOT ranges
+ * K5 envelope comes from scan-match and contains legitimate negative/extended values
  */
 export function validateK5Envelope(
   k5Envelope: any
@@ -146,26 +147,24 @@ export function validateK5Envelope(
 
     const typedBounds = bounds as any;
 
-    // Validate min
-    const minResult = validateNumber(typedBounds.min, 'morph_value', { required: true });
-    if (!minResult.isValid) {
+    // Validate min is a finite number - NO RANGE VALIDATION
+    if (typeof typedBounds.min !== 'number' || !Number.isFinite(typedBounds.min)) {
       return {
         isValid: false,
-        error: `Invalid K5 min for "${key}": ${minResult.error}`
+        error: `Invalid K5 min for "${key}": must be a finite number`
       };
     }
 
-    // Validate max
-    const maxResult = validateNumber(typedBounds.max, 'morph_value', { required: true });
-    if (!maxResult.isValid) {
+    // Validate max is a finite number - NO RANGE VALIDATION
+    if (typeof typedBounds.max !== 'number' || !Number.isFinite(typedBounds.max)) {
       return {
         isValid: false,
-        error: `Invalid K5 max for "${key}": ${maxResult.error}`
+        error: `Invalid K5 max for "${key}": must be a finite number`
       };
     }
 
-    const min = minResult.sanitizedValue as number;
-    const max = maxResult.sanitizedValue as number;
+    const min = typedBounds.min;
+    const max = typedBounds.max;
 
     // Validate min <= max
     if (min > max) {
