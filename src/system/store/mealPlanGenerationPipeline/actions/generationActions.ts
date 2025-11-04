@@ -99,7 +99,8 @@ export const createGenerationActions = (
             week_number: plan.weekNumber,
             start_date: plan.startDate,
             inventory_count: 0,
-            has_preferences: true
+            has_preferences: true,
+            batch_cooking_enabled: config.batchCooking || false
           })
         });
 

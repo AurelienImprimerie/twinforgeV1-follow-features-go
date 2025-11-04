@@ -14,6 +14,7 @@ interface MealPlanRequest {
   start_date: string;
   inventory_count: number;
   has_preferences: boolean;
+  batch_cooking_enabled?: boolean;
 }
 
 interface MealPlanDay {
@@ -129,7 +130,8 @@ async function generateMealPlanWithAI(
   weekNumber: number,
   startDate: string,
   userId: string,
-  supabase: any
+  supabase: any,
+  batchCookingEnabled: boolean = false
 ): Promise<{ mealPlan: MealPlan; tokenUsage: { input: number; output: number; costUsd: number } }> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
@@ -138,7 +140,7 @@ async function generateMealPlanWithAI(
 
   const inventoryText = safeSerialize(inventory);
   const profileText = safeSerialize(userProfile);
-  
+
   const foodPreferences = userProfile.food_preferences || {};
   const sensoryPreferences = userProfile.sensory_preferences || {};
   const likedCuisines = foodPreferences.cuisines || [];
@@ -147,8 +149,8 @@ async function generateMealPlanWithAI(
   const dislikedIngredients = userProfile.nutrition?.disliked || [];
   const textureAversions = sensoryPreferences.textureAversions || [];
   const spiceTolerance = sensoryPreferences.spiceTolerance || 1;
-  
-  const prompt = `Tu es un expert nutritionniste et chef cuisinier. Génère un plan de repas personnalisé pour une semaine complète.
+
+  let prompt = `Tu es un expert nutritionniste et chef cuisinier. Génère un plan de repas personnalisé pour une semaine complète.
 
 PROFIL UTILISATEUR:
 ${profileText}
@@ -176,6 +178,7 @@ CONTRAINTES:
 - Explorer différentes combinaisons de saveurs et techniques de cuisson
 - Varier les textures et les présentations pour éviter la monotonie
 - Optimiser pour réduire le gaspillage alimentaire
+${batchCookingEnabled ? '- BATCH COOKING ACTIVÉ: Proposer des recettes qui peuvent être préparées en grande quantité et réutilisées intelligemment (ex: poulet rôti utilisé pour salade le lendemain, base de sauce pour plusieurs repas, légumes grillés en batch). Indiquer clairement les opportunités de batch cooking dans les recettes.' : ''}
 
 INSTRUCTIONS CRÉATIVITÉ:
 - Faire preuve de CRÉATIVITÉ et de NOUVEAUTÉ dans chaque repas
@@ -220,9 +223,9 @@ RÉPONDS UNIQUEMENT AVEC LE JSON COMPLET. NE FOURNIS AUCUN TEXTE EXPLICATIF AVAN
 
   // Add reproductive health context if available
   try {
-    const reproductiveContext = await getReproductiveHealthContext(supabase, userId);
-    if (reproductiveContext) {
-      prompt += `\n\n${reproductiveContext}`;
+    const reproductiveContext = await getReproductiveHealthContext(userId, supabase);
+    if (reproductiveContext && reproductiveContext.formattedContext) {
+      prompt += `\n\n${reproductiveContext.formattedContext}`;
     }
   } catch (error) {
     console.warn('MEAL_PLAN_GENERATOR', 'Failed to fetch reproductive health context', { error });
@@ -432,7 +435,8 @@ Deno.serve(async (req) => {
       requestData.week_number,
       requestData.start_date,
       requestData.user_id,
-      supabase
+      supabase,
+      requestData.batch_cooking_enabled || false
     );
 
     // Consume tokens after successful generation
