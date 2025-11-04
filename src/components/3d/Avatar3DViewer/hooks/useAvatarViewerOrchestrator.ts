@@ -896,19 +896,21 @@ export function useAvatarViewerOrchestrator(
       return; // Nothing changed, skip update
     }
 
-    // PHASE 1 OPTIMIZATION: Only log in development mode to reduce production overhead
-    if (import.meta.env.DEV) {
-      logger.debug('ORCHESTRATOR', '🔄 Changes detected in override data', {
-        morphChanged,
-        limbMassChanged,
-        skinToneChanged,
-        morphKeyCount: props.overrideMorphData ? Object.keys(props.overrideMorphData).length : 0,
-        limbMassKeyCount: props.overrideLimbMasses ? Object.keys(props.overrideLimbMasses).length : 0,
-        projectionSessionActive: isProjectionSessionActiveRef.current,
-        fullyInitialized: isFullyInitializedRef.current,
-        philosophy: 'change_detection_positive'
-      });
-    }
+    // PHASE 1 OPTIMIZATION: Log changes for projection tracking
+    logger.info('ORCHESTRATOR', '🔄 PROJECTION: Override data changes detected', {
+      morphChanged,
+      limbMassChanged,
+      skinToneChanged,
+      morphKeyCount: props.overrideMorphData ? Object.keys(props.overrideMorphData).length : 0,
+      limbMassKeyCount: props.overrideLimbMasses ? Object.keys(props.overrideLimbMasses).length : 0,
+      projectionSessionActive: isProjectionSessionActiveRef.current,
+      fullyInitialized: isFullyInitializedRef.current,
+      morphDataSample: props.overrideMorphData ? {
+        pearFigure: props.overrideMorphData.pearFigure,
+        bodybuilderSize: props.overrideMorphData.bodybuilderSize
+      } : null,
+      philosophy: 'projection_change_detection'
+    });
 
     // MOBILE OPTIMIZATION: Adaptive throttle based on device
     // Mobile: 400ms to prevent excessive updates and memory pressure
@@ -965,14 +967,14 @@ export function useAvatarViewerOrchestrator(
             propsRef.current.faceMorphData,
             morphologyMapping
           );
-          // PHASE 1 OPTIMIZATION: Only log slow operations
           const morphDuration = Date.now() - morphStartTime;
-          if (morphDuration > 100 || import.meta.env.DEV) {
-            logger.debug('ORCHESTRATOR', '✅ Morphs applied', {
-              duration: `${morphDuration}ms`,
-              philosophy: 'morph_update_complete'
-            });
-          }
+          logger.info('ORCHESTRATOR', '✅ PROJECTION: Morphs applied successfully', {
+            duration: `${morphDuration}ms`,
+            pearFigure: props.overrideMorphData?.pearFigure,
+            bodybuilderSize: props.overrideMorphData?.bodybuilderSize,
+            totalMorphKeys: Object.keys(props.overrideMorphData || {}).length,
+            philosophy: 'projection_morph_applied'
+          });
         }
 
         // Apply updated limb masses if provided (only if changed)

@@ -63,11 +63,22 @@ const ProjectionTab: React.FC = () => {
       return baseMorphData;
     }
 
-    return {
+    const projected = {
       ...baseMorphData,
       pearFigure: projectionResult.pearFigure,
       bodybuilderSize: projectionResult.bodybuilderSize
     };
+
+    logger.info('PROJECTION_TAB', 'Projected morph data updated', {
+      basePearFigure: baseMorphData.pearFigure,
+      baseMuscle: baseMorphData.bodybuilderSize,
+      projectedPearFigure: projected.pearFigure,
+      projectedMuscle: projected.bodybuilderSize,
+      totalMorphKeys: Object.keys(projected).length,
+      philosophy: 'projection_morph_data_ready'
+    });
+
+    return projected;
   }, [projectionResult, baseMorphData, bodyScanData?.morph_values]);
 
   // Calculer les changements pour l'affichage
@@ -83,12 +94,14 @@ const ProjectionTab: React.FC = () => {
 
   // Handlers
   const handleParamsChange = useCallback((newParams: ProjectionParams) => {
-    logger.debug('PROJECTION_TAB', 'Projection params changed', {
+    logger.info('PROJECTION_TAB', 'Projection params changed', {
+      previousParams: projectionParams,
       newParams,
+      willTriggerRecalculation: true,
       philosophy: 'user_adjusted_projection'
     });
     setProjectionParams(newParams);
-  }, []);
+  }, [projectionParams]);
 
   const handleReset = useCallback(() => {
     logger.info('PROJECTION_TAB', 'Reset to current morphology', {
@@ -282,10 +295,10 @@ const ProjectionTab: React.FC = () => {
           <Suspense fallback={<ProjectionTabSkeleton />}>
             <Avatar3DViewer
               userProfile={userProfile}
-              morphData={projectedMorphData}
-              limbMasses={displayLimbMasses}
-              skinTone={displaySkinTone}
-              resolvedGender={resolvedGender}
+              overrideMorphData={projectedMorphData}
+              overrideLimbMasses={displayLimbMasses}
+              overrideSkinTone={displaySkinTone}
+              overrideGender={resolvedGender}
               faceMorphData={faceMorphData}
               faceSkinTone={faceSkinTone}
               className="w-full h-full"
