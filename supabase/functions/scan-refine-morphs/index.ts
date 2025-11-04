@@ -102,12 +102,129 @@ Deno.serve(async (req)=>{
       timestamp: new Date().toISOString()
     });
 
-    // Continue with the rest of the function...
-    // (Rest of implementation remains the same)
+    // Fetch morphology mapping from database
+    console.log(`🔍 [scan-refine-morphs] [${traceId}] Fetching morphology mapping for ${resolvedGender}`);
+    const mappingResult = await refetchMorphologyMapping(supabase, resolvedGender);
+
+    if (!mappingResult.success || !mappingResult.mapping) {
+      throw new Error(`Failed to fetch morphology mapping: ${mappingResult.error || 'Unknown error'}`);
+    }
+
+    const { morph_values: morphMapping, limb_masses: limbMapping } = mappingResult.mapping;
+
+    console.log(`✅ [scan-refine-morphs] [${traceId}] Morphology mapping fetched:`, {
+      morphValuesCount: Object.keys(morphMapping || {}).length,
+      limbMassesCount: Object.keys(limbMapping || {}).length,
+      philosophy: 'mapping_fetched_for_constraints'
+    });
+
+    // Build AI refinement prompt
+    const prompt = buildAIRefinementPrompt({
+      blend_shape_params,
+      blend_limb_masses,
+      k5_envelope,
+      vision_classification,
+      user_measurements,
+      resolvedGender,
+      morphMapping,
+      limbMapping
+    });
+
+    console.log(`📝 [scan-refine-morphs] [${traceId}] AI prompt built:`, {
+      promptLength: prompt.length,
+      hasK5Envelope: !!k5_envelope,
+      hasVisionClassification: !!vision_classification,
+      philosophy: 'ai_prompt_preparation'
+    });
+
+    // Call OpenAI for AI-driven refinement
+    const aiStartTime = performance.now();
+    const aiResult = await callOpenAIForRefinement(prompt, photos, traceId);
+    const aiDuration = performance.now() - aiStartTime;
+
+    console.log(`🤖 [scan-refine-morphs] [${traceId}] OpenAI refinement completed:`, {
+      durationMs: aiDuration.toFixed(2),
+      hasResult: !!aiResult,
+      philosophy: 'ai_refinement_complete'
+    });
+
+    // Validate and clamp AI results
+    const validationResult = validateAndClampAIResults(
+      aiResult,
+      morphMapping,
+      limbMapping,
+      k5_envelope,
+      traceId
+    );
+
+    if (!validationResult.success) {
+      throw new Error(`AI result validation failed: ${validationResult.error}`);
+    }
+
+    const { final_shape_params, final_limb_masses, clamping_metadata } = validationResult;
+
+    console.log(`✅ [scan-refine-morphs] [${traceId}] Validation and clamping completed:`, {
+      finalShapeParamsCount: Object.keys(final_shape_params).length,
+      finalLimbMassesCount: Object.keys(final_limb_masses).length,
+      clampingMetadata: clamping_metadata,
+      philosophy: 'validation_and_clamping_complete'
+    });
+
+    // Calculate refinement deltas for audit
+    const deltas = calculateRefinementDeltas(blend_shape_params, final_shape_params);
+    const activeKeysCount = countActiveKeys(final_shape_params, final_limb_masses);
+
+    // Consume tokens atomically
+    const actualTokensUsed = Math.ceil(estimatedTokensForRefine * 0.95); // Adjust based on actual usage
+    await consumeTokensAtomic(
+      supabase,
+      user_id,
+      actualTokensUsed,
+      'ai-morph-refinement',
+      {
+        scan_id,
+        traceId,
+        aiDurationMs: aiDuration,
+        philosophy: 'token_consumption_after_successful_refinement'
+      }
+    );
+
+    const totalProcessingTime = performance.now() - processingStartTime;
+
+    console.log(`✅ [scan-refine-morphs] [${traceId}] AI refinement completed successfully:`, {
+      totalProcessingTimeMs: totalProcessingTime.toFixed(2),
+      aiDurationMs: aiDuration.toFixed(2),
+      finalShapeParamsCount: Object.keys(final_shape_params).length,
+      finalLimbMassesCount: Object.keys(final_limb_masses).length,
+      activeKeysCount,
+      tokensConsumed: actualTokensUsed,
+      philosophy: 'phase_b_ai_refinement_success'
+    });
+
+    // Return refined morphology with CORS headers
+    return jsonResponse({
+      success: true,
+      final_shape_params,
+      final_limb_masses,
+      clamping_metadata,
+      audit: {
+        deltas,
+        activeKeysCount,
+        aiDurationMs: aiDuration,
+        totalProcessingTimeMs: totalProcessingTime,
+        tokensConsumed: actualTokensUsed,
+        traceId
+      }
+    }, 200);
+
   } catch (error: any) {
     console.error(`❌ [scan-refine-morphs] [${traceId}] Error:`, error);
+
+    // Always return CORS headers even on error
     return jsonResponse({
-      error: error.message || 'Internal server error'
+      success: false,
+      error: error.message || 'Internal server error',
+      traceId
     }, 500);
   }
 });

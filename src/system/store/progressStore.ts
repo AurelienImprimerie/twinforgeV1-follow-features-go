@@ -638,7 +638,15 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       try {
         // Safe check: only play sound if playSoundLegacy is available
         if (typeof playSoundLegacy === 'function') {
-          playSoundLegacy(500, 50); // VisionOS26 subtle progression sound - every 4%
+          // Create proper SoundDefinition object
+          playSoundLegacy({
+            frequency: 500,
+            duration: 50,
+            volume: 0.3,
+            type: 'sine',
+            attack: 0.01,
+            release: 0.02
+          });
           logger.debug('Progress audio feedback played', {
             percentage: safePercentage,
             threshold: currentThreshold,

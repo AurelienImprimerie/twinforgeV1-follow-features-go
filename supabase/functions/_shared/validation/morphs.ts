@@ -69,8 +69,9 @@ export function validateLimbMasses(
     return keysResult;
   }
 
-  // Expected limb keys
+  // Expected limb keys (supports both old symmetric and new simplified formats)
   const expectedKeys = [
+    // Old symmetric format
     'leftArm',
     'rightArm',
     'leftForearm',
@@ -82,7 +83,18 @@ export function validateLimbMasses(
     'leftLeg',
     'rightLeg',
     'leftFoot',
-    'rightFoot'
+    'rightFoot',
+    // New simplified format (from boneMapping v1.0)
+    'gate',
+    'isActive',
+    'armMass',
+    'calfMass',
+    'neckMass',
+    'thighMass',
+    'torsoMass',
+    'forearmMass',
+    'hipMass',
+    'shoulderMass'
   ];
 
   // Validate each limb mass
@@ -90,8 +102,19 @@ export function validateLimbMasses(
   for (const [key, value] of Object.entries(limbMasses)) {
     // Check if key is expected
     if (!expectedKeys.includes(key)) {
-      console.warn(`Unexpected limb mass key: ${key}`);
+      console.warn(`Unexpected limb mass key: ${key} - This key is not in the expected list. Consider updating the validation schema.`);
       // Don't fail, just warn - AI might use different naming
+    }
+
+    // Special handling for control flags
+    if (key === 'gate' || key === 'isActive') {
+      // Gate should be 0 or 1, isActive should be boolean or 0/1
+      if (key === 'isActive') {
+        sanitizedMasses[key] = typeof value === 'boolean' ? (value ? 1 : 0) : (value ? 1 : 0);
+      } else {
+        sanitizedMasses[key] = typeof value === 'number' ? value : 1;
+      }
+      continue;
     }
 
     const numResult = validateNumber(value, 'limb_mass_kg', { required: true });
