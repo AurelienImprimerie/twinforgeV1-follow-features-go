@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 import { createHash } from 'node:crypto';
 import { checkTokenBalance, consumeTokensAtomic, createInsufficientTokensResponse } from '../_shared/tokenMiddleware.ts';
+import { getReproductiveHealthContext } from '../_shared/utils/reproductiveHealthContext.ts';
 
 /**
  * GPT-5 Mini pricing for cost calculation and logging
@@ -222,7 +223,7 @@ function buildFastingInsightsPrompt(profile: UserProfile, sessions: FastingSessi
   const successRate = completedSessions.length > 0 ? 
     (successfulSessions.length / completedSessions.length) * 100 : 0;
 
-  return `Tu es un expert en jeûne intermittent et en optimisation métabolique. Analyse les données de jeûne de cet utilisateur et génère des insights personnalisés.
+  let contextPrompt = `Tu es un expert en jeûne intermittent et en optimisation métabolique. Analyse les données de jeûne de cet utilisateur et génère des insights personnalisés.
 
 PROFIL UTILISATEUR:
 - Sexe: ${profile.sex || 'Non spécifié'}
@@ -234,7 +235,9 @@ PROFIL UTILISATEUR:
 - Niveau de stress: ${profile.emotions?.stress || 'Non spécifié'}/10
 - Heures de sommeil: ${profile.emotions?.sleepHours || 'Non spécifié'}h
 - Régime alimentaire: ${profile.nutrition?.diet || 'Non spécifié'}
-- Protocole de jeûne préféré: ${profile.nutrition?.fastingWindow?.protocol || 'Non spécifié'}
+- Protocole de jeûne préféré: ${profile.nutrition?.fastingWindow?.protocol || 'Non spécifié'}`;
+
+  return contextPrompt
 
 DONNÉES DE JEÛNE (${periodDays} derniers jours):
 - Sessions totales: ${sessions.length}
@@ -260,8 +263,9 @@ INSTRUCTIONS:
 2. Identifie 3-5 insights spécifiques (patterns, recommandations, achievements, warnings)
 3. Chaque insight doit avoir un titre accrocheur, un contenu explicatif, et si possible une action concrète
 4. Adapte tes conseils au profil de l'utilisateur (objectif, chronotype, niveau d'activité)
-5. Sois encourageant mais réaliste
-6. Utilise un ton expert mais accessible
+5. SI des données de santé reproductive sont fournies, adapte les recommandations de jeûne en conséquence
+6. Sois encourageant mais réaliste
+7. Utilise un ton expert mais accessible
 
 Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
 {
@@ -290,11 +294,23 @@ Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
  * Call OpenAI GPT-5 mini for insights generation
  */
 async function generateFastingInsights(
-  profile: UserProfile, 
-  sessions: FastingSession[], 
-  periodDays: number
+  profile: UserProfile,
+  sessions: FastingSession[],
+  periodDays: number,
+  userId: string,
+  supabase: any
 ): Promise<{ insights: FastingInsightsResponse; tokensUsed: number }> {
-  const prompt = buildFastingInsightsPrompt(profile, sessions, periodDays);
+  let prompt = buildFastingInsightsPrompt(profile, sessions, periodDays);
+
+  // Add reproductive health context if available
+  try {
+    const reproductiveContext = await getReproductiveHealthContext(supabase, userId);
+    if (reproductiveContext) {
+      prompt += `\n\n${reproductiveContext}`;
+    }
+  } catch (error) {
+    console.warn('FASTING_INSIGHTS_GENERATOR', 'Failed to fetch reproductive health context', { error });
+  }
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -506,7 +522,7 @@ Deno.serve(async (req: Request) => {
       completedSessions: completedSessions.length
     });
 
-    const { insights, tokensUsed } = await generateFastingInsights(profile, fastingSessions, periodDays);
+    const { insights, tokensUsed } = await generateFastingInsights(profile, fastingSessions, periodDays, userId, supabase);
 
     // Calculate cost
     const estimatedCostUSD = calculateCostFromTokens(tokensUsed);

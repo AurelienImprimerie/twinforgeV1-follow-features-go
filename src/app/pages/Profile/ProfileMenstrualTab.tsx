@@ -3,27 +3,32 @@ import { Loader2 } from 'lucide-react';
 import MenstrualCycleSection from './components/menstrual/MenstrualCycleSection';
 import CycleRegularitySection from './components/menstrual/CycleRegularitySection';
 import CurrentCycleInfoCard from './components/menstrual/CurrentCycleInfoCard';
+import ReproductiveStatusSelector from './components/menstrual/ReproductiveStatusSelector';
+import MenopauseInfoCard from './components/menstrual/MenopauseInfoCard';
+import MenopauseDetailsSection from './components/menstrual/MenopauseDetailsSection';
 import { useProfileMenstrualForm } from './hooks/useProfileMenstrualForm';
+import { useMenopauseForm } from './hooks/useMenopauseForm';
 import GlassCard from '../../../ui/cards/GlassCard';
 import { ProgressBar } from './components/ProfileIdentityComponents';
 import UnsavedChangesIndicator from '../../../ui/components/UnsavedChangesIndicator';
 import { calculateMenstrualCompletion } from './utils/profileCompletion';
 
 const ProfileMenstrualTab: React.FC = () => {
-  const {
-    formData,
-    updateFormData,
-    errors,
-    isLoading,
-    isSaving,
-    handleSave,
-  } = useProfileMenstrualForm();
+  const menstrualForm = useProfileMenstrualForm();
+  const menopauseForm = useMenopauseForm();
 
-  // Calculate completion percentage
-  const completionPercentage = useMemo(
-    () => calculateMenstrualCompletion(formData),
-    [formData.lastPeriodDate, formData.averageCycleLength, formData.averagePeriodDuration, formData.cycleRegularity]
-  );
+  const isMenstruating = menopauseForm.formData.reproductive_status === 'menstruating';
+  const isLoading = menstrualForm.isLoading || menopauseForm.isLoading;
+  const isSaving = menstrualForm.isSaving || menopauseForm.isSaving;
+
+  // Calculate completion percentage based on active form
+  const completionPercentage = useMemo(() => {
+    if (isMenstruating) {
+      return calculateMenstrualCompletion(menstrualForm.formData);
+    }
+    const fields = Object.values(menopauseForm.formData).filter(v => v !== null && v !== '');
+    return Math.round((fields.length / 8) * 100);
+  }, [isMenstruating, menstrualForm.formData, menopauseForm.formData]);
 
   // Track if form is dirty (has unsaved changes)
   const [isDirty, setIsDirty] = React.useState(false);
@@ -31,13 +36,19 @@ const ProfileMenstrualTab: React.FC = () => {
   // Update dirty state when form data changes
   React.useEffect(() => {
     setIsDirty(true);
-  }, [formData]);
+  }, [menstrualForm.formData, menopauseForm.formData]);
 
   // Reset dirty state after successful save
   const handleSaveWithReset = async () => {
-    await handleSave();
+    if (isMenstruating) {
+      await menstrualForm.handleSave();
+    } else {
+      await menopauseForm.handleSave();
+    }
     setIsDirty(false);
   };
+
+  const errors = isMenstruating ? menstrualForm.errors : menopauseForm.errors;
 
   if (isLoading) {
     return (
@@ -58,37 +69,76 @@ const ProfileMenstrualTab: React.FC = () => {
         modifiedFieldsCount={Object.keys(formData).filter(key => formData[key as keyof typeof formData] !== '').length}
       />
 
-      {/* Enhanced Progress Header in Pink */}
+      {/* Enhanced Progress Header */}
       <ProgressBar
         percentage={completionPercentage}
-        title="Cycle Menstruel"
-        subtitle="Informations sur votre cycle et régularité"
-        color="#EC4899"
+        title={isMenstruating ? "Cycle Menstruel" : "Santé Reproductive"}
+        subtitle={isMenstruating ? "Informations sur votre cycle et régularité" : "Suivi de votre santé hormonale"}
+        color={isMenstruating ? "#EC4899" : "#F59E0B"}
       />
 
-      {formData.lastPeriodDate && (
-        <CurrentCycleInfoCard
-          lastPeriodDate={formData.lastPeriodDate}
-          averageCycleLength={formData.averageCycleLength}
+      {/* Reproductive Status Selector */}
+      <ReproductiveStatusSelector
+        value={menopauseForm.formData.reproductive_status}
+        onChange={(status) => {
+          menopauseForm.updateFormData({ reproductive_status: status });
+          setIsDirty(true);
+        }}
+      />
+
+      {/* Info Card - Conditional based on status */}
+      {isMenstruating ? (
+        menstrualForm.formData.lastPeriodDate && (
+          <CurrentCycleInfoCard
+            lastPeriodDate={menstrualForm.formData.lastPeriodDate}
+            averageCycleLength={menstrualForm.formData.averageCycleLength}
+          />
+        )
+      ) : (
+        <MenopauseInfoCard
+          status={menopauseForm.formData.reproductive_status}
+          lastPeriodDate={menopauseForm.formData.last_period_date}
+          menopauseConfirmationDate={menopauseForm.formData.menopause_confirmation_date}
+          perimenopauseStage={menopauseForm.formData.perimenopause_stage}
         />
       )}
 
-      <MenstrualCycleSection
-        value={{
-          lastPeriodDate: formData.lastPeriodDate,
-          averageCycleLength: formData.averageCycleLength,
-          averagePeriodDuration: formData.averagePeriodDuration,
-        }}
-        onChange={(value) => updateFormData(value)}
-        errors={errors}
-      />
+      {/* Form Sections - Conditional based on status */}
+      {isMenstruating ? (
+        <>
+          <MenstrualCycleSection
+            value={{
+              lastPeriodDate: menstrualForm.formData.lastPeriodDate,
+              averageCycleLength: menstrualForm.formData.averageCycleLength,
+              averagePeriodDuration: menstrualForm.formData.averagePeriodDuration,
+            }}
+            onChange={(value) => menstrualForm.updateFormData(value)}
+            errors={menstrualForm.errors}
+          />
 
-      <CycleRegularitySection
-        value={{
-          cycleRegularity: formData.cycleRegularity,
-        }}
-        onChange={(value) => updateFormData(value)}
-      />
+          <CycleRegularitySection
+            value={{
+              cycleRegularity: menstrualForm.formData.cycleRegularity,
+            }}
+            onChange={(value) => menstrualForm.updateFormData(value)}
+          />
+        </>
+      ) : (
+        <MenopauseDetailsSection
+          status={menopauseForm.formData.reproductive_status}
+          value={{
+            perimenopause_stage: menopauseForm.formData.perimenopause_stage,
+            last_period_date: menopauseForm.formData.last_period_date,
+            menopause_confirmation_date: menopauseForm.formData.menopause_confirmation_date,
+            fsh_level: menopauseForm.formData.fsh_level,
+            estrogen_level: menopauseForm.formData.estrogen_level,
+            last_hormone_test_date: menopauseForm.formData.last_hormone_test_date,
+            notes: menopauseForm.formData.notes,
+          }}
+          onChange={(value) => menopauseForm.updateFormData(value)}
+          errors={menopauseForm.errors}
+        />
+      )}
 
       <GlassCard variant="frosted" className="p-6">
         <div className="space-y-2">
@@ -96,7 +146,7 @@ const ProfileMenstrualTab: React.FC = () => {
             🔒 Confidentialité et sécurité
           </h3>
           <p className="text-sm text-white/60">
-            Vos données menstruelles sont strictement confidentielles et protégées par chiffrement.
+            Vos données de santé reproductive sont strictement confidentielles et protégées par chiffrement.
             Elles ne sont utilisées que pour personnaliser vos recommandations et ne sont jamais partagées.
           </p>
         </div>
@@ -114,7 +164,7 @@ const ProfileMenstrualTab: React.FC = () => {
       >
         <div className="space-y-3 text-white/80">
           <h3 className="text-white font-semibold text-lg mb-4">
-            💡 Comment TwinForge utilise vos données de cycle
+            💡 Comment TwinForge utilise vos données de santé reproductive
           </h3>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -124,7 +174,9 @@ const ProfileMenstrualTab: React.FC = () => {
               <div>
                 <p className="text-white font-medium">Forge Nutritionnelle</p>
                 <p className="text-white/60 text-sm">
-                  Recommandations alimentaires adaptées à votre phase cyclique et besoins hormonaux
+                  {isMenstruating
+                    ? "Recommandations alimentaires adaptées à votre phase cyclique"
+                    : "Nutrition optimisée pour vos besoins hormonaux et santé osseuse"}
                 </p>
               </div>
             </div>
@@ -135,7 +187,9 @@ const ProfileMenstrualTab: React.FC = () => {
               <div>
                 <p className="text-white font-medium">Forge Temporelle</p>
                 <p className="text-white/60 text-sm">
-                  Conseils de jeûne adaptés aux fluctuations hormonales de votre cycle
+                  {isMenstruating
+                    ? "Conseils de jeûne adaptés aux fluctuations hormonales"
+                    : "Protocoles de jeûne adaptés à votre métabolisme et énergie"}
                 </p>
               </div>
             </div>
@@ -146,7 +200,9 @@ const ProfileMenstrualTab: React.FC = () => {
               <div>
                 <p className="text-white font-medium">Forge Énergétique</p>
                 <p className="text-white/60 text-sm">
-                  Programme d'entraînement optimisé selon votre énergie et phase du cycle
+                  {isMenstruating
+                    ? "Programme d'entraînement optimisé selon votre phase du cycle"
+                    : "Focus musculation et densité osseuse pour santé optimale"}
                 </p>
               </div>
             </div>
@@ -157,7 +213,9 @@ const ProfileMenstrualTab: React.FC = () => {
               <div>
                 <p className="text-white font-medium">Intelligence Centrale</p>
                 <p className="text-white/60 text-sm">
-                  Insights et alertes proactives pour optimiser votre bien-être à chaque phase
+                  {isMenstruating
+                    ? "Insights proactifs pour optimiser votre bien-être à chaque phase"
+                    : "Recommandations personnalisées pour votre transition hormonale"}
                 </p>
               </div>
             </div>

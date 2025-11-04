@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 import { checkTokenBalance, consumeTokensAtomic, createInsufficientTokensResponse } from '../_shared/tokenMiddleware.ts';
+import { getReproductiveHealthContext } from '../_shared/utils/reproductiveHealthContext.ts';
 
 interface TrendAnalysisRequest {
   user_id: string;
@@ -183,35 +184,49 @@ ${index + 1}. ${meal.meal_type} - ${meal.total_kcal} kcal (${new Date(meal.times
   // Add user context for personalization
   if (userProfile) {
     prompt += `\n\nCONTEXTE UTILISATEUR:`;
-    
+
     if (userProfile.objective) {
       const objectiveText = userProfile.objective === 'fat_loss' ? 'Perte de graisse' :
                            userProfile.objective === 'muscle_gain' ? 'Prise de muscle' :
                            userProfile.objective === 'recomp' ? 'Recomposition corporelle' : userProfile.objective;
       prompt += `\n- Objectif: ${objectiveText}`;
     }
-    
+
     if (userProfile.nutrition?.diet) {
       prompt += `\n- Régime: ${userProfile.nutrition.diet}`;
     }
-    
+
     if (userProfile.nutrition?.allergies?.length > 0) {
       prompt += `\n- Allergies: ${userProfile.nutrition.allergies.join(', ')}`;
     }
-    
+
     if (userProfile.nutrition?.proteinTarget_g) {
       prompt += `\n- Cible protéines: ${userProfile.nutrition.proteinTarget_g}g/jour`;
     }
-    
+
     if (userProfile.emotions?.stress && userProfile.emotions.stress > 7) {
       prompt += `\n- Niveau de stress élevé: ${userProfile.emotions.stress}/10`;
     }
-    
+
     if (userProfile.emotions?.chronotype) {
       const chronotypeText = userProfile.emotions.chronotype === 'morning' ? 'Matinal' :
                             userProfile.emotions.chronotype === 'evening' ? 'Tardif' : 'Intermédiaire';
       prompt += `\n- Chronotype: ${chronotypeText}`;
     }
+  }
+
+  // Add reproductive health context if available
+  try {
+    const reproductiveContext = await getReproductiveHealthContext(
+      createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!),
+      requestBody.user_id
+    );
+
+    if (reproductiveContext) {
+      prompt += `\n\n${reproductiveContext}`;
+    }
+  } catch (error) {
+    console.warn('NUTRITION_TREND_ANALYSIS', 'Failed to fetch reproductive health context', { error });
   }
 
   prompt += `\n\nGénérez un objet JSON avec cette structure exacte (TOUT en français):

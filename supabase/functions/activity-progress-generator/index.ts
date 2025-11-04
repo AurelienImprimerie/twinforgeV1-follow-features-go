@@ -10,6 +10,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkTokenBalance, consumeTokensAtomic, createInsufficientTokensResponse } from '../_shared/tokenMiddleware.ts';
+import { getReproductiveHealthContext } from '../_shared/utils/reproductiveHealthContext.ts';
 
 // Configuration du cache par période d'analyse
 const CACHE_VALIDITY_HOURS = {
@@ -469,6 +470,7 @@ IMPORTANT:
 - Les activités avec données biométriques sont plus fiables pour l'analyse
 - Accorde plus de poids aux métriques de fréquence cardiaque, HRV et VO2max dans tes insights
 - Mentionne le taux d'enrichissement si élevé (c'est un point positif)
+- SI des données de santé reproductive sont fournies (cycle menstruel ou ménopause), adapte les recommandations d'activité en conséquence
 
 TÂCHE: Génère une analyse complète des patterns d'activité avec:
 
@@ -591,14 +593,24 @@ RÉPONSE REQUISE (JSON uniquement):
     "consistency_score": 78
   }
 }`;
+    // Add reproductive health context if available
+    try {
+      const reproductiveContext = await getReproductiveHealthContext(supabase, userId);
+      if (reproductiveContext) {
+        insightsPrompt += `\n\n${reproductiveContext}`;
+      }
+    } catch (error) {
+      console.warn('🔥 [ACTIVITY_INSIGHTS] Failed to fetch reproductive health context', { error });
+    }
+
     console.log('🔥 [ACTIVITY_INSIGHTS] Calling OpenAI API with gpt-5-mini');
-    
+
     let insightsResult;
     let inputTokens = 0;
     let outputTokens = 0;
     let totalTokens = 0;
     let costUsd = 0;
-    
+
     try {
       // Appel à gpt-5-mini pour la génération d'insights
       const insightsResponse = await fetch('https://api.openai.com/v1/chat/completions', {

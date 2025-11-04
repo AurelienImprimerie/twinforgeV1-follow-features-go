@@ -1,4 +1,5 @@
 import { checkTokenBalance, consumeTokensAtomic, createInsufficientTokensResponse } from '../_shared/tokenMiddleware.ts';
+import { getReproductiveHealthContext } from '../_shared/utils/reproductiveHealthContext.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,7 +127,9 @@ async function generateMealPlanWithAI(
   userProfile: any,
   inventory: any[],
   weekNumber: number,
-  startDate: string
+  startDate: string,
+  userId: string,
+  supabase: any
 ): Promise<{ mealPlan: MealPlan; tokenUsage: { input: number; output: number; costUsd: number } }> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
@@ -166,6 +169,7 @@ CONTRAINTES:
 - Utiliser prioritairement les ingrédients de l'inventaire
 - Respecter les préférences alimentaires et objectifs nutritionnels
 - Équilibrer les macronutriments selon le profil
+- SI des données de santé reproductive sont fournies (cycle menstruel ou ménopause), adapter les recommandations nutritionnelles en conséquence
 - IMPÉRATIF: Éviter la répétition des plats ou des combinaisons d'ingrédients similaires sur plusieurs jours consécutifs
 - IMPÉRATIF: Proposer une variété de cuisines et de types de repas (ex: soupes, salades, plats mijotés, grillades, sautés, currys, etc.)
 - Alterner entre les cuisines appréciées si plusieurs sont mentionnées
@@ -213,6 +217,16 @@ FORMAT DE RÉPONSE REQUIS (JSON strict):
 }
 
 RÉPONDS UNIQUEMENT AVEC LE JSON COMPLET. NE FOURNIS AUCUN TEXTE EXPLICATIF AVANT OU APRÈS LE JSON.`;
+
+  // Add reproductive health context if available
+  try {
+    const reproductiveContext = await getReproductiveHealthContext(supabase, userId);
+    if (reproductiveContext) {
+      prompt += `\n\n${reproductiveContext}`;
+    }
+  } catch (error) {
+    console.warn('MEAL_PLAN_GENERATOR', 'Failed to fetch reproductive health context', { error });
+  }
 
   const truncatedPrompt = truncatePrompt(prompt);
   
@@ -416,7 +430,9 @@ Deno.serve(async (req) => {
       userProfile,
       inventory,
       requestData.week_number,
-      requestData.start_date
+      requestData.start_date,
+      requestData.user_id,
+      supabase
     );
 
     // Consume tokens after successful generation

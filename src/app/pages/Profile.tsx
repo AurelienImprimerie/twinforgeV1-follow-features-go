@@ -109,21 +109,6 @@ const Profile: React.FC = () => {
   // Check if user is female to show menstrual tab
   const isFemale = profile?.sex === 'female';
 
-  // Debug log
-  React.useEffect(() => {
-    console.log('🌸 MENSTRUAL TAB DEBUG:', {
-      profileSex: profile?.sex,
-      isFemale,
-      profileExists: !!profile,
-      profileKeys: profile ? Object.keys(profile) : [],
-    });
-    logger.debug('PROFILE_TAB', 'Menstrual tab visibility check', {
-      profileSex: profile?.sex,
-      isFemale,
-      profileExists: !!profile,
-    });
-  }, [profile?.sex, isFemale, profile]);
-
   // Derive activeTab from URL search params or hash
   const activeTab = React.useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -161,23 +146,6 @@ const Profile: React.FC = () => {
         iconColor={headerContent.color}
       />
 
-      {/* Temporary debug display */}
-      <div style={{
-        padding: '12px',
-        background: 'rgba(255, 100, 255, 0.1)',
-        border: '1px solid rgba(255, 100, 255, 0.3)',
-        borderRadius: '8px',
-        color: '#fff',
-        fontSize: '12px',
-        fontFamily: 'monospace'
-      }}>
-        <strong>🔍 DEBUG - Menstrual Tab Visibility:</strong><br/>
-        Profile Sex: {profile?.sex || 'undefined'}<br/>
-        Is Female: {isFemale ? 'YES ✅' : 'NO ❌'}<br/>
-        Profile Loaded: {profile ? 'YES ✅' : 'NO ❌'}<br/>
-        Should Show Tab: {isFemale ? 'YES - Tab should be visible' : 'NO - Tab hidden'}
-      </div>
-      
       <Tabs
         defaultValue="identity"
         value={activeTab}
