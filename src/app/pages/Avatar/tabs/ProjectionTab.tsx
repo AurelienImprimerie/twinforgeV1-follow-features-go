@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { ConditionalMotion } from '../../../../lib/motion/ConditionalMotion';
+import { AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../../../../system/store/userStore';
 import { useBodyScanData } from '../../../../hooks/useBodyScanData';
 import { useProjectionCalculator, type ProjectionParams } from '../../../../hooks/useProjectionCalculator';
@@ -359,82 +361,85 @@ const ProjectionTab: React.FC = () => {
       )}
 
       {/* Modal de sauvegarde */}
-      {showSaveModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{
-            zIndex: 'var(--z-modal-backdrop)',
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(10px)'
-          }}
-          onClick={() => setShowSaveModal(false)}
-        >
+      <AnimatePresence>
+        {showSaveModal && createPortal(
           <ConditionalMotion
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            style={{ zIndex: 'var(--z-modal)', position: 'relative' }}
+            className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-lg flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSaveModal(false)}
           >
-            <GlassCard className="p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold text-lg">Sauvegarder la projection</h3>
-                <button
-                  onClick={() => setShowSaveModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <SpatialIcon Icon={ICONS.X} size={20} className="text-white/70" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-white/80 text-sm mb-2">Nom de la projection</label>
-                  <input
-                    type="text"
-                    value={saveName}
-                    onChange={(e) => setSaveName(e.target.value)}
-                    placeholder={`Projection ${new Date().toLocaleDateString('fr-FR')}`}
-                    className="w-full px-4 py-2 rounded-lg text-white bg-white/5 border border-white/10 focus:border-emerald-400/50 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-white/80 text-sm mb-2">Description (optionnel)</label>
-                  <textarea
-                    value={saveDescription}
-                    onChange={(e) => setSaveDescription(e.target.value)}
-                    placeholder="Décrivez votre objectif..."
-                    rows={3}
-                    className="w-full px-4 py-2 rounded-lg text-white bg-white/5 border border-white/10 focus:border-emerald-400/50 focus:outline-none resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-3">
+            <ConditionalMotion
+              className="relative w-full max-w-md"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <GlassCard className="p-6 bg-gradient-to-br from-emerald-900/20 to-green-900/20 border-emerald-500/30">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold text-lg">Sauvegarder la projection</h3>
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 py-2 rounded-lg font-medium text-white/80 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    aria-label="Fermer"
                   >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={isCreating}
-                    className="flex-1 py-2 rounded-lg font-semibold text-white transition-colors"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.9))',
-                      border: '2px solid rgba(16,185,129,0.6)',
-                      opacity: isCreating ? 0.5 : 1
-                    }}
-                  >
-                    {isCreating ? 'Sauvegarde...' : 'Sauvegarder'}
+                    <SpatialIcon Icon={ICONS.X} size={20} className="text-white/70" />
                   </button>
                 </div>
-              </div>
-            </GlassCard>
-          </ConditionalMotion>
-        </div>
-      )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-white/80 text-sm mb-2">Nom de la projection</label>
+                    <input
+                      type="text"
+                      value={saveName}
+                      onChange={(e) => setSaveName(e.target.value)}
+                      placeholder={`Projection ${new Date().toLocaleDateString('fr-FR')}`}
+                      className="w-full px-4 py-2 rounded-lg text-white bg-white/5 border border-white/10 focus:border-emerald-400/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white/80 text-sm mb-2">Description (optionnel)</label>
+                    <textarea
+                      value={saveDescription}
+                      onChange={(e) => setSaveDescription(e.target.value)}
+                      placeholder="Décrivez votre objectif..."
+                      rows={3}
+                      className="w-full px-4 py-2 rounded-lg text-white bg-white/5 border border-white/10 focus:border-emerald-400/50 focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowSaveModal(false)}
+                      className="flex-1 py-2 rounded-lg font-medium text-white/80 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isCreating}
+                      className="flex-1 py-2 rounded-lg font-semibold text-white transition-colors"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.9))',
+                        border: '2px solid rgba(16,185,129,0.6)',
+                        opacity: isCreating ? 0.5 : 1
+                      }}
+                    >
+                      {isCreating ? 'Sauvegarde...' : 'Sauvegarder'}
+                    </button>
+                  </div>
+                </div>
+              </GlassCard>
+            </ConditionalMotion>
+          </ConditionalMotion>,
+          document.body
+        )}
+      </AnimatePresence>
 
       {/* Liste des projections sauvegardées */}
       {projections.length > 0 && (

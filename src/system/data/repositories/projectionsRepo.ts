@@ -99,7 +99,13 @@ export const projectionsRepo = {
       fat_change: input.fatChange,
       muscle_change: input.muscleChange,
       projected_morph_values: input.projectedMorphValues,
-      is_favorite: false
+      is_favorite: false,
+      // Valeurs par défaut pour les anciennes colonnes (compatibilité)
+      activity_level: input.params.sportIntensity || 3,
+      caloric_balance: 0,
+      time_period_months: input.params.duration === '3_months' ? 3 :
+                         input.params.duration === '6_months' ? 6 :
+                         input.params.duration === '1_year' ? 12 : 36
     };
 
     const { data, error } = await supabase
