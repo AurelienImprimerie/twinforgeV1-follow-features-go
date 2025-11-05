@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import MealPlanLibraryCTA from '../components/MealPlanLibraryCTA';
 import SavedMealPlanCard from './PlanTab/components/SavedMealPlanCard';
+import MealPlanDetailModal from './PlanTab/components/MealPlanDetailModal';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
@@ -16,6 +17,7 @@ import type { MealPlanData } from '../../../../system/store/mealPlanStore/types'
 const PlanTab: React.FC = () => {
   const { allMealPlans, loadAllMealPlans } = useMealPlanStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<MealPlanData | null>(null);
 
   // Load meal plans on mount
   useEffect(() => {
@@ -33,17 +35,23 @@ const PlanTab: React.FC = () => {
 
   // Handle plan selection
   const handlePlanClick = (plan: MealPlanData) => {
-    // TODO: Navigate to plan details or open plan viewer modal
-    console.log('Selected plan:', plan);
+    setSelectedPlan(plan);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="space-y-6"
-    >
+    <>
+      {selectedPlan && (
+        <MealPlanDetailModal
+          plan={selectedPlan}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="space-y-6"
+      >
       {/* CTA pour Générer des Plans Alimentaires */}
       <MealPlanLibraryCTA />
 
@@ -170,6 +178,7 @@ const PlanTab: React.FC = () => {
         </GlassCard>
       )}
     </motion.div>
+    </>
   );
 };
 
