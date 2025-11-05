@@ -16,6 +16,7 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
   const {
     mealPlanCandidates,
     loadingState,
+    loadingMessage,
     config,
     receivedDaysCount,
     totalDaysToGenerate,
@@ -28,10 +29,10 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
   const currentPlan = mealPlanCandidates[0];
   const totalDays = totalDaysToGenerate || config.weekCount * 7;
   const receivedDays = receivedDaysCount || currentPlan?.days?.length || 0;
-  const progressPercentage = totalDays > 0
-    ? Math.round((receivedDays / totalDays) * 100)
-    : 0;
+  // Use simulatedOverallProgress from store which now reflects actual backend progress
+  const progressPercentage = simulatedOverallProgress;
   const isStreaming = loadingState === 'streaming' && receivedDays > 0;
+  const isGenerating = loadingState === 'generating' || loadingState === 'streaming';
 
   // Force re-render when lastStateUpdate changes
   React.useEffect(() => {
