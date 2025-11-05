@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import GlassCard from '../../../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../../../ui/icons/registry';
+import { useFeedback } from '../../../../../../hooks/useFeedback';
+import { useMealPlanStore } from '../../../../../../system/store/mealPlanStore';
+import ConfirmationModal from '../../../../../../ui/components/ConfirmationModal';
 import type { MealPlanData } from '../../../../../../system/store/mealPlanStore/types';
 
 interface SavedMealPlanCardProps {
@@ -11,6 +14,11 @@ interface SavedMealPlanCardProps {
 }
 
 const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) => {
+  const { click } = useFeedback();
+  const { deleteMealPlan } = useMealPlanStore();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Calculate totals
   const totalDays = plan.days?.length || 0;
   const totalMeals = plan.days?.reduce((sum, day) => {
@@ -30,14 +38,46 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
     }
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    click();
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteMealPlan(plan.id);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error('Failed to delete meal plan:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <motion.div
-      whileHover={{ scale: 1.02, y: -4 }}
-      transition={{ duration: 0.2 }}
-    >
-      <GlassCard
-        className="p-6 cursor-pointer"
-        onClick={onClick}
+    <>
+      {showDeleteModal && (
+        <ConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleConfirmDelete}
+          title="Supprimer le plan alimentaire"
+          message={`Êtes-vous sûr de vouloir supprimer le plan de la Semaine ${plan.weekNumber} ? Cette action ne peut pas être annulée.`}
+          confirmText={isDeleting ? "Suppression..." : "Supprimer"}
+          cancelText="Annuler"
+          isLoading={isDeleting}
+          variant="danger"
+        />
+      )}
+      <motion.div
+        whileHover={{ scale: 1.02, y: -4 }}
+        transition={{ duration: 0.2 }}
+      >
+        <GlassCard
+          className="p-6 cursor-pointer relative"
+          onClick={onClick}
         style={{
           background: `
             radial-gradient(circle at 30% 20%, color-mix(in srgb, #8B5CF6 8%, transparent) 0%, transparent 60%),
@@ -77,11 +117,29 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
               </div>
             </div>
 
-            <SpatialIcon
-              Icon={ICONS.ChevronRight}
-              size={20}
-              className="text-white/40 flex-shrink-0"
-            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeleteClick}
+                className="p-2 rounded-lg transition-all hover:scale-110 active:scale-95"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}
+                aria-label="Supprimer le plan"
+                title="Supprimer le plan"
+              >
+                <SpatialIcon
+                  Icon={ICONS.Trash2}
+                  size={16}
+                  className="text-red-400"
+                />
+              </button>
+              <SpatialIcon
+                Icon={ICONS.ChevronRight}
+                size={20}
+                className="text-white/40 flex-shrink-0"
+              />
+            </div>
           </div>
 
           {/* Stats Grid */}
@@ -185,6 +243,7 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
         </div>
       </GlassCard>
     </motion.div>
+    </>
   );
 };
 

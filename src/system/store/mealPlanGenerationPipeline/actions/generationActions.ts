@@ -594,6 +594,10 @@ export const createGenerationActions = (
                   const currentDayIndex = receivedDays.length - 1;
                   const mealsToEnrich = currentPlan.days[currentDayIndex]?.meals || [];
 
+                  // CRITICAL: Capture store methods before async operations
+                  const capturedUpdateMealImageUrl = get().updateMealImageUrl;
+                  const capturedGetState = get;
+
                   // Get user preferences for recipe enrichment
                   (async () => {
                     try {
@@ -614,7 +618,7 @@ export const createGenerationActions = (
                       // Enrich ALL meals of this day in parallel
                       const enrichmentPromises = mealsToEnrich.map(async (meal) => {
                         // Check if cancelled before enriching
-                        if (get().isCancelling) {
+                        if (capturedGetState().isCancelling) {
                           return null;
                         }
 
@@ -711,12 +715,12 @@ export const createGenerationActions = (
                             mealId: meal.id,
                             mealName: meal.name,
                             recipeId: detailedRecipe.id,
-                            enrichedCount: get().enrichedMealsCount,
-                            totalToEnrich: get().totalMealsToEnrich
+                            enrichedCount: capturedGetState().enrichedMealsCount,
+                            totalToEnrich: capturedGetState().totalMealsToEnrich
                           });
 
                           // Trigger image generation in parallel (non-blocking)
-                          if (detailedRecipe.imageSignature && !get().isCancelling) {
+                          if (detailedRecipe.imageSignature && !capturedGetState().isCancelling) {
                             triggerImageGeneration({
                               recipeId: detailedRecipe.id,
                               recipeDetails: {
@@ -731,7 +735,7 @@ export const createGenerationActions = (
                               dayIndex: currentDayIndex,
                               mealId: meal.id,
                               signal: abortController.signal,
-                              updateMealImageUrl: get().updateMealImageUrl,
+                              updateMealImageUrl: capturedUpdateMealImageUrl,
                               incrementImageCount: () => {
                                 set((state) => ({
                                   imagesGeneratedCount: state.imagesGeneratedCount + 1
@@ -757,8 +761,8 @@ export const createGenerationActions = (
                       logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Day enrichment completed', {
                         dayIndex: currentDayIndex,
                         mealsEnriched: mealsToEnrich.length,
-                        totalEnriched: get().enrichedMealsCount,
-                        totalToEnrich: get().totalMealsToEnrich
+                        totalEnriched: capturedGetState().enrichedMealsCount,
+                        totalToEnrich: capturedGetState().totalMealsToEnrich
                       });
                     } catch (error) {
                       logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Day enrichment error', {

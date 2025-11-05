@@ -15,6 +15,7 @@ export interface PlanDataActions {
   setCurrentPlan: (plan: MealPlanData | null) => void;
   loadAllMealPlans: () => Promise<void>;
   saveCurrentMealPlan: () => Promise<void>;
+  deleteMealPlan: (planId: string) => Promise<void>;
 }
 
 export const createPlanDataActions = (
@@ -238,6 +239,55 @@ export const createPlanDataActions = (
 
     } catch (error) {
       logger.error('MEAL_PLAN_STORE', 'Failed to save current meal plan', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  deleteMealPlan: async (planId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      logger.info('MEAL_PLAN_STORE', 'Deleting meal plan', {
+        planId,
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+
+      // Soft delete by setting is_archived to true
+      const { error } = await supabase
+        .from('meal_plans')
+        .update({
+          is_archived: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', planId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw new Error(`Failed to delete meal plan: ${error.message}`);
+      }
+
+      // Remove from local state
+      const { allMealPlans } = get();
+      set({
+        allMealPlans: allMealPlans.filter(plan => plan.id !== planId)
+      });
+
+      logger.info('MEAL_PLAN_STORE', 'Meal plan deleted successfully', {
+        planId,
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error('MEAL_PLAN_STORE', 'Failed to delete meal plan', {
+        planId,
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
