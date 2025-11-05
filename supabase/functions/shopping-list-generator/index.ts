@@ -376,7 +376,7 @@ Génère une liste de courses COMPLÈTE et DÉTAILLÉE basée sur les informatio
 - Taille : ${userProfile.height_cm || 'Non spécifié'} cm
 - Poids : ${userProfile.weight_kg || 'Non spécifié'} kg
 - Objectif : ${userProfile.objective || 'Non spécifié'}
-- Niveau d'activité : ${userProfile.activity_level || 'Non spécifié'}
+- Niveau activité : ${userProfile.activity_level || 'Non spécifié'}
 - Préférences alimentaires : ${JSON.stringify(userProfile.food_preferences || {})}
 - Restrictions alimentaires : ${JSON.stringify(userProfile.constraints || {})}
 - Équipement cuisine : ${JSON.stringify(userProfile.kitchen_equipment || {})}
@@ -449,7 +449,7 @@ ${JSON.stringify(mealPlan, null, 2)}
   ],
   "suggestions": [
     {
-      "name": "Huile d'olive extra vierge",
+      "name": "Huile olive extra vierge",
       "reason": "Indispensable pour la cuisson et les assaisonnements",
       "category": "Épicerie"
     }
@@ -463,7 +463,7 @@ ${JSON.stringify(mealPlan, null, 2)}
     "estimated_cost": "45-65€",
     "confidence_level": "Élevé",
     "currency": "EUR",
-    "notes": ["Prix basés sur les moyennes ${country}", "Possibilité d'économies avec les promotions"]
+    "notes": ["Prix basés sur les moyennes ${country}", "Possibilité economie avec les promotions"]
   }
 }
 
@@ -497,8 +497,20 @@ function parseAIResponse(aiContent: string, country: string): ShoppingListRespon
       logger.error('No JSON found in AI response', { aiContent });
       throw new Error('No JSON found in AI response')
     }
-    
-    const parsedResponse = JSON.parse(jsonMatch[0])
+
+    // Sanitize JSON string - fix common issues with control characters and malformed strings
+    let jsonString = jsonMatch[0];
+
+    // Fix malformed strings with unescaped quotes inside JSON values
+    // This regex finds strings that have unescaped single quotes that break JSON
+    jsonString = jsonString.replace(/"name":\s*"([^"]*)'([^"]*)"/g, (match, before, after) => {
+      return `"name": "${before}\\'${after}"`;
+    });
+
+    // Remove any actual control characters (newlines, tabs in string values)
+    jsonString = jsonString.replace(/[\u0000-\u001F]+/g, ' ');
+
+    const parsedResponse = JSON.parse(jsonString)
     
     // Validate shopping_list structure
     if (!Array.isArray(parsedResponse.shopping_list)) {
