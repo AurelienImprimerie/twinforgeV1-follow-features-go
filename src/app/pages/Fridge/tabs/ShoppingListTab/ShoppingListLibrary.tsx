@@ -42,6 +42,19 @@ const ShoppingListLibrary: React.FC = () => {
     }
   }, [allShoppingLists, expandedListId]);
 
+  // Debug: Log when expandedList changes
+  useEffect(() => {
+    if (expandedList) {
+      logger.info('SHOPPING_LIST_LIBRARY', '[RENDER] ExpandedList state updated', {
+        listId: expandedList.id,
+        categoriesCount: expandedList.categories?.length || 0,
+        totalItems: expandedList.totalItems,
+        hasCategories: !!expandedList.categories,
+        firstCategory: expandedList.categories?.[0]
+      });
+    }
+  }, [expandedList]);
+
   // Load full details of a shopping list (categories + items)
   const loadListDetails = async (listId: string) => {
     setIsLoading(true);
@@ -66,6 +79,11 @@ const ShoppingListLibrary: React.FC = () => {
         .order('category_name', { ascending: true });
 
       if (itemsError) throw itemsError;
+
+      logger.info('SHOPPING_LIST_LIBRARY', 'Items fetched from database', {
+        itemsCount: itemsData?.length || 0,
+        items: itemsData?.slice(0, 3) // Log first 3 items for debugging
+      });
 
       // Group items by category
       const categoriesMap = new Map<string, ShoppingListCategory>();
@@ -127,7 +145,8 @@ const ShoppingListLibrary: React.FC = () => {
       logger.info('SHOPPING_LIST_LIBRARY', 'List details loaded', {
         listId,
         categoriesCount: categories.length,
-        itemsCount: expanded.totalItems
+        itemsCount: expanded.totalItems,
+        categories: categories.map(c => ({ name: c.name, itemsCount: c.items.length }))
       });
     } catch (error) {
       logger.error('SHOPPING_LIST_LIBRARY', 'Failed to load list details', { error });
@@ -347,8 +366,22 @@ const ShoppingListLibrary: React.FC = () => {
 
                     {/* Categories and Items */}
                     <div className="space-y-4">
-                      {expandedList.categories.map((category) => (
-                        <div key={category.id} className="space-y-2">
+                      {expandedList.categories.length === 0 ? (
+                        <GlassCard className="p-6 text-center border-yellow-500/20 bg-yellow-500/5">
+                          <SpatialIcon Icon={ICONS.AlertTriangle} size={32} className="text-yellow-400 mx-auto mb-3" />
+                          <p className="text-white font-semibold mb-2">Articles non chargés</p>
+                          <p className="text-white/60 text-sm mb-4">
+                            Les articles de cette liste n'ont pas pu être chargés depuis la base de données.
+                          </p>
+                          <p className="text-white/50 text-xs">
+                            Cela peut arriver si la migration de schéma n'a pas encore été appliquée à Supabase.
+                            <br />
+                            Essayez de générer une nouvelle liste de courses après avoir appliqué les migrations.
+                          </p>
+                        </GlassCard>
+                      ) : (
+                        expandedList.categories.map((category) => (
+                          <div key={category.id} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <SpatialIcon
                               Icon={ICONS[category.icon as keyof typeof ICONS] || ICONS.Package}
@@ -394,7 +427,8 @@ const ShoppingListLibrary: React.FC = () => {
                             ))}
                           </div>
                         </div>
-                      ))}
+                        ))
+                      )}
                     </div>
 
                     {/* Add Item Form */}
