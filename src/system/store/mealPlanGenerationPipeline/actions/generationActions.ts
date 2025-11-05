@@ -708,18 +708,22 @@ export const createGenerationActions = (
         timestamp: new Date().toISOString()
       });
 
-      // Mark session as completed and clean up progress
+      // Mark session as completed but keep progress data for potential return
       if (currentSessionId) {
         await mealPlanProgressService.markSessionCompleted(currentSessionId);
       }
 
-      // Reset pipeline after successful save
+      // IMPORTANT: Do NOT reset pipeline after save - keep user on validation screen
+      // This allows them to view their saved plan and navigate back if needed
       set({
-        mealPlanCandidates: [],
-        currentStep: 'configuration',
-        simulatedOverallProgress: 0,
         loadingState: 'idle',
-        currentSessionId: null
+        simulatedOverallProgress: 100
+      });
+
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Meal plans saved, user remains on validation screen', {
+        currentStep: state.currentStep,
+        sessionId: currentSessionId,
+        timestamp: new Date().toISOString()
       });
 
     } catch (error) {

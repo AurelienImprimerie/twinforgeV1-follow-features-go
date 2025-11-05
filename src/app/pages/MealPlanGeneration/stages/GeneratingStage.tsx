@@ -23,24 +23,38 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
   const progressPercentage = Math.round((receivedDays / totalDays) * 100);
   const isStreaming = loadingState === 'streaming' && receivedDays > 0;
 
-  // Generate contextual messages based on progress
-  const getContextualMessage = (): string => {
-    if (!isStreaming) {
-      return 'La Forge Nutritionnelle analyse votre inventaire et vos préférences pour créer des plans alimentaires optimisés...';
-    }
-
+  // Generate dynamic title and subtitle based on progress
+  const getDynamicTitle = (): string => {
     if (receivedDays === 0) {
-      return 'Analyse de votre inventaire et création du premier jour...';
-    } else if (receivedDays === 1) {
-      return 'Premier jour généré ! Préparation de la suite de votre semaine...';
-    } else if (receivedDays < 4) {
-      return `${receivedDays} jours créés ! L'IA optimise vos repas en fonction de vos objectifs...`;
-    } else if (receivedDays < 6) {
-      return `${receivedDays} jours générés ! Finalisation de votre semaine équilibrée...`;
-    } else if (receivedDays === 6) {
-      return 'Presque terminé ! Derniers ajustements pour une semaine parfaitement équilibrée...';
+      return 'Analyse en cours...';
+    } else if (receivedDays < 3) {
+      return 'Création de vos repas...';
+    } else if (receivedDays < 5) {
+      return 'Optimisation nutritionnelle...';
+    } else if (receivedDays < 7) {
+      return 'Finalisation de votre plan...';
     } else {
-      return 'Plan hebdomadaire complet ! Vérification finale...';
+      return 'Plan hebdomadaire prêt !';
+    }
+  };
+
+  const getDynamicSubtitle = (): string => {
+    if (receivedDays === 0) {
+      return 'Analyse de votre inventaire et de vos préférences nutritionnelles';
+    } else if (receivedDays === 1) {
+      return 'Premier jour généré avec succès, création de la suite de votre semaine';
+    } else if (receivedDays === 2) {
+      return 'Début de semaine créé, équilibrage des macronutriments';
+    } else if (receivedDays === 3) {
+      return 'Milieu de semaine en cours, variété et équilibre optimisés';
+    } else if (receivedDays === 4) {
+      return 'Plus de la moitié générée, ajustements caloriques en cours';
+    } else if (receivedDays === 5) {
+      return 'Fin de semaine en préparation, optimisation finale';
+    } else if (receivedDays === 6) {
+      return 'Dernier jour en création, vérification de l\'équilibre hebdomadaire';
+    } else {
+      return 'Semaine complète générée et optimisée pour vos objectifs';
     }
   };
 
@@ -143,7 +157,7 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
               ))}
             </div>
 
-            {/* Title and Description */}
+            {/* Dynamic Title and Description */}
             <div className="space-y-4">
               <h2
                 className="text-3xl font-bold text-white"
@@ -151,56 +165,36 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
                   textShadow: '0 0 30px color-mix(in srgb, #8B5CF6 60%, transparent)'
                 }}
               >
-                Forge des Plans Alimentaires
+                {getDynamicTitle()}
               </h2>
               <p className="text-white/80 text-lg max-w-2xl mx-auto leading-relaxed">
-                {getContextualMessage()}
+                {getDynamicSubtitle()}
               </p>
             </div>
 
-            {/* Progress Bar - Always visible during generation */}
+            {/* Progress Bar - Always visible with dynamic progress */}
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/80">
-                  {isStreaming ? 'Génération en cours...' : 'Préparation...'}
+                  {receivedDays > 0 ? 'Génération en cours...' : 'Initialisation...'}
                 </span>
-                {isStreaming && (
-                  <span className="text-violet-400 font-semibold">{receivedDays}/{totalDays} jours</span>
-                )}
+                <span className="text-violet-400 font-semibold">{receivedDays}/{totalDays} jours</span>
               </div>
               <div className="relative w-full h-4 bg-white/5 rounded-full overflow-hidden">
-                {isStreaming ? (
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-violet-600"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPercentage}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                    style={{
-                      boxShadow: '0 0 20px rgba(139, 92, 246, 0.6)'
-                    }}
-                  />
-                ) : (
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500"
-                    animate={{
-                      x: ['-100%', '100%']
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: 'linear'
-                    }}
-                    style={{
-                      width: '50%',
-                      boxShadow: '0 0 20px rgba(139, 92, 246, 0.6)'
-                    }}
-                  />
-                )}
+                <motion.div
+                  className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-violet-600"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${progressPercentage}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  style={{
+                    boxShadow: '0 0 20px rgba(139, 92, 246, 0.6)'
+                  }}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-center flex-1">
                   <span className="text-violet-300 text-2xl font-bold">
-                    {isStreaming ? `${progressPercentage}%` : '0%'}
+                    {progressPercentage}%
                   </span>
                 </div>
                 {config.batchCooking && (
@@ -212,14 +206,14 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
               </div>
             </div>
 
-            {/* Loading Steps - Only show when not streaming */}
-            {!isStreaming && (
+            {/* Dynamic Progress Steps */}
+            {receivedDays === 0 && (
               <div className="space-y-3 max-w-md mx-auto">
                 {[
                   'Analyse de votre inventaire',
-                  'Optimisation nutritionnelle',
-                  'Création des plans hebdomadaires',
-                  'Génération de la structure des repas'
+                  'Chargement de vos préférences',
+                  'Calcul des besoins nutritionnels',
+                  'Préparation de la génération'
                 ].map((step, index) => (
                   <MotionDiv
                     key={step}

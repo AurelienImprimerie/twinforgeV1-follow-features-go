@@ -496,12 +496,20 @@ Deno.serve(async (req) => {
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
-      start(controller) {
-        mealPlan.days.forEach((day, index) => {
+      async start(controller) {
+        // Stream days progressively with delays for better UX
+        for (let index = 0; index < mealPlan.days.length; index++) {
+          const day = mealPlan.days[index];
           console.log(`MEAL_PLAN_GENERATOR Day ${index + 1} generated`, { date: day.date });
+
           const chunk = `data: ${JSON.stringify({ type: 'day', data: day })}\n\n`;
           controller.enqueue(encoder.encode(chunk));
-        });
+
+          // Add a small delay between days for progressive streaming (except for last day)
+          if (index < mealPlan.days.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+        }
 
         console.log('MEAL_PLAN_GENERATOR Plan generation completed', {
           userId: requestData.user_id,
@@ -511,8 +519,9 @@ Deno.serve(async (req) => {
           timestamp: new Date().toISOString()
         });
 
-        const completionChunk = `data: ${JSON.stringify({ 
-          type: 'complete', 
+        // Send completion chunk
+        const completionChunk = `data: ${JSON.stringify({
+          type: 'complete',
           data: {
             weekly_summary: mealPlan.weekly_summary,
             nutritional_highlights: mealPlan.nutritional_highlights,
@@ -522,11 +531,11 @@ Deno.serve(async (req) => {
           }
         })}\n\n`;
         controller.enqueue(encoder.encode(completionChunk));
+
+        console.log('MEAL_PLAN_GENERATOR Stream completed successfully');
         controller.close();
       }
     });
-
-    console.log('MEAL_PLAN_GENERATOR Stream completed successfully');
 
     const startDate = new Date(requestData.start_date);
     const endDate = new Date(startDate);

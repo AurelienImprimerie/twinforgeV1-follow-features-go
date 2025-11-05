@@ -134,11 +134,15 @@ const MealPlanGenerationPage: React.FC = () => {
       success();
       showToast({
         type: 'success',
-        title: 'Plan sauvegardé',
-        message: 'Votre plan alimentaire de base a été enregistré avec succès !',
-        duration: 3000
+        title: 'Plan sauvegardé avec succès !',
+        message: 'Votre plan est maintenant disponible dans votre bibliothèque',
+        duration: 4000,
+        action: {
+          label: 'Voir dans Plans',
+          onClick: () => navigate('/fridge#plans')
+        }
       });
-      navigate('/fridge#plans');
+      // DO NOT navigate automatically - let user stay on validation screen
     } catch (error) {
       showToast({
         type: 'error',
@@ -171,11 +175,15 @@ const MealPlanGenerationPage: React.FC = () => {
       success();
       showToast({
         type: 'success',
-        title: 'Plan complet sauvegardé',
-        message: 'Votre plan alimentaire avec toutes les recettes a été enregistré !',
-        duration: 3000
+        title: 'Plan complet sauvegardé !',
+        message: 'Votre plan avec toutes les recettes est dans votre bibliothèque',
+        duration: 4000,
+        action: {
+          label: 'Voir dans Plans',
+          onClick: () => navigate('/fridge#plans')
+        }
       });
-      navigate('/fridge#plans');
+      // DO NOT navigate automatically - let user stay on validation screen
     } catch (error) {
       showToast({
         type: 'error',

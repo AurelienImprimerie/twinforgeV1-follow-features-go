@@ -3,6 +3,7 @@ import { useFeedback } from '../../../../../../hooks/useFeedback';
 import { useToast } from '../../../../../../ui/components/ToastProvider';
 import { useUserStore } from '../../../../../../system/store/userStore';
 import { useMealPlanStore } from '../../../../../../system/store/mealPlanStore';
+import { useRealtimeMealPlans } from '../../../../../../hooks/useRealtimeMealPlans';
 import { generateMealPlan, generateDetailedRecipeForMeal, generateAllDetailedRecipesForDay } from '../../../../../../system/store/mealPlanStore/actions/generationActions';
 import logger from '../../../../../../lib/utils/logger';
 import { calculateRecipeWorkshopCompletion, getFeatureSpecificGuidance } from '../../../../../../system/profile/profileCompletionService';
@@ -55,6 +56,9 @@ export const usePlanTabLogic = () => {
   const userId = session?.user?.id;
   const hasInventory = selectedInventoryId && availableInventories.length > 0;
   const selectedInventory = availableInventories.find(inv => inv.id === selectedInventoryId);
+
+  // Setup realtime listener for new meal plans
+  useRealtimeMealPlans(userId);
 
   // Calculate week date range
   const weekDateRange = useMemo(() => {
