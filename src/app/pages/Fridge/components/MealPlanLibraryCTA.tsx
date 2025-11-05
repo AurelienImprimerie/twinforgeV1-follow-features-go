@@ -7,7 +7,11 @@ import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import { useFeedback } from '../../../../hooks/useFeedback';
 
-const MealPlanLibraryCTA: React.FC = () => {
+interface MealPlanLibraryCTAProps {
+  hasExistingPlans?: boolean;
+}
+
+const MealPlanLibraryCTA: React.FC<MealPlanLibraryCTAProps> = ({ hasExistingPlans = false }) => {
   const navigate = useNavigate();
   const { click } = useFeedback();
   const { isPerformanceMode } = usePerformanceMode();
@@ -128,11 +132,13 @@ const MealPlanLibraryCTA: React.FC = () => {
               textShadow: '0 0 25px color-mix(in srgb, #8B5CF6 50%, transparent)'
             }}
           >
-            Générer Nouveaux Plans Alimentaires
+            {hasExistingPlans ? 'Générer un Nouveau Plan' : 'Générer Votre Premier Plan'}
           </h2>
           <p className="text-white/85 text-lg leading-relaxed max-w-2xl mx-auto">
-            Créez des plans alimentaires hebdomadaires personnalisés basés sur votre inventaire.
-            La Forge Nutritionnelle optimise vos repas pour la semaine entière.
+            {hasExistingPlans
+              ? 'Créez un nouveau plan alimentaire hebdomadaire personnalisé basé sur votre inventaire actuel.'
+              : 'Créez des plans alimentaires hebdomadaires personnalisés basés sur votre inventaire. La Forge Nutritionnelle optimise vos repas pour la semaine entière.'
+            }
           </p>
         </MotionDiv>
 
