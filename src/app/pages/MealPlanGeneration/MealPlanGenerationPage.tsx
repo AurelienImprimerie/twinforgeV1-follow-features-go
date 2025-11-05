@@ -139,7 +139,7 @@ const MealPlanGenerationPage: React.FC = () => {
         duration: 4000,
         action: {
           label: 'Voir dans Plans',
-          onClick: () => navigate('/fridge#plan')
+          onClick: () => navigate('/fridge#plans')
         }
       });
       // DO NOT navigate automatically - let user stay on validation screen
@@ -180,7 +180,7 @@ const MealPlanGenerationPage: React.FC = () => {
         duration: 4000,
         action: {
           label: 'Voir dans Plans',
-          onClick: () => navigate('/fridge#plan')
+          onClick: () => navigate('/fridge#plans')
         }
       });
       // DO NOT navigate automatically - let user stay on validation screen
@@ -255,7 +255,7 @@ const MealPlanGenerationPage: React.FC = () => {
     }
 
     resetPipeline();
-    navigate('/fridge#plan');
+    navigate('/fridge#plans');
   };
 
   const currentStepData = steps.find(s => s.id === currentStep) || steps[0];
