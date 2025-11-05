@@ -8,11 +8,12 @@ import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import logger from '../../../../lib/utils/logger';
 
-// Import components (to be created)
+// Import components
 import EmptyShoppingListState from './ShoppingListTab/components/EmptyShoppingListState';
 import ShoppingListGenerationLoader from './ShoppingListTab/ShoppingListGenerationLoader';
 import ShoppingListDisplay from './ShoppingListTab/ShoppingListDisplay';
 import ShoppingListGeneratorCard from './ShoppingListTab/ShoppingListGeneratorCard';
+import ShoppingListLibraryCTA from '../components/ShoppingListLibraryCTA';
 
 /**
  * Shopping List Tab - Generate personalized shopping lists
@@ -101,6 +102,9 @@ const ShoppingListTab: React.FC = () => {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="space-y-6 w-full"
     >
+      {/* CTA pour Générer des Listes de Courses */}
+      <ShoppingListLibraryCTA />
+
       {/* Error Display */}
       <AnimatePresence>
         {error && (

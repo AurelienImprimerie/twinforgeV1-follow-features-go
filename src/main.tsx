@@ -49,6 +49,7 @@ const FridgePage = lazy(() => import('./app/pages/FridgePage'));
 const FridgeScanPage = lazy(() => import('./app/pages/FridgeScanPage'));
 const RecipeGenerationPage = lazy(() => import('./app/pages/RecipeGeneration/RecipeGenerationPage'));
 const MealPlanGenerationPage = lazy(() => import('./app/pages/MealPlanGeneration/MealPlanGenerationPage'));
+const ShoppingListGenerationPage = lazy(() => import('./app/pages/ShoppingListGeneration/ShoppingListGenerationPage'));
 
 // Dev pages
 const DevCachePage = lazy(() => import('./app/pages/DevCachePage'));
@@ -187,6 +188,10 @@ const router = createBrowserRouter([
       {
         path: "meal-plan-generation",
         element: <Suspense fallback={<LoadingFallback />}><MealPlanGenerationPage /></Suspense>
+      },
+      {
+        path: "shopping-list-generation",
+        element: <Suspense fallback={<LoadingFallback />}><ShoppingListGenerationPage /></Suspense>
       },
       // Core pages
       {
