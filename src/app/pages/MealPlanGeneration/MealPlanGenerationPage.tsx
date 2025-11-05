@@ -151,7 +151,7 @@ const MealPlanGenerationPage: React.FC = () => {
         duration: 4000,
         action: {
           label: 'Voir dans Plans',
-          onClick: () => navigate('/fridge#plans')
+          onClick: () => navigate('/fridge#plan')
         }
       });
       // DO NOT navigate automatically - let user stay on validation screen
@@ -192,7 +192,7 @@ const MealPlanGenerationPage: React.FC = () => {
         duration: 4000,
         action: {
           label: 'Voir dans Plans',
-          onClick: () => navigate('/fridge#plans')
+          onClick: () => navigate('/fridge#plan')
         }
       });
       // DO NOT navigate automatically - let user stay on validation screen
@@ -277,7 +277,7 @@ const MealPlanGenerationPage: React.FC = () => {
       setShowExitModal(true);
     } else {
       resetPipeline();
-      navigate('/fridge#plans');
+      navigate('/fridge#plan');
     }
   };
 
@@ -302,7 +302,7 @@ const MealPlanGenerationPage: React.FC = () => {
       duration: 4000
     });
 
-    navigate('/fridge#plans');
+    navigate('/fridge#plan');
   };
 
   const handleStopAndReturn = async () => {
@@ -324,7 +324,7 @@ const MealPlanGenerationPage: React.FC = () => {
       duration: 3000
     });
 
-    navigate('/fridge#plans');
+    navigate('/fridge#plan');
   };
 
   const handleDiscardAndExit = async () => {
@@ -344,7 +344,7 @@ const MealPlanGenerationPage: React.FC = () => {
       duration: 3000
     });
 
-    navigate('/fridge#plans');
+    navigate('/fridge#plan');
   };
 
   const currentStepData = steps.find(s => s.id === currentStep) || steps[0];
