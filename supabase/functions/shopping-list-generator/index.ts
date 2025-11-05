@@ -330,7 +330,7 @@ serve(async (req) => {
 
       // Consume tokens after successful generation
       const requestId = crypto.randomUUID();
-await consumeTokensAtomic(supabase, {
+      await consumeTokensAtomic(supabase, {
         userId: user_id,
         edgeFunctionName: 'shopping-list-generator',
         operationType: 'shopping_list_generation',
