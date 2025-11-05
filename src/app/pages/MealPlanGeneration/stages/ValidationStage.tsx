@@ -400,7 +400,7 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
           animate: { opacity: 1 },
           transition: { duration: 0.3, delay: 0.6 }
         })}
-        className="flex justify-end"
+        className="flex justify-center"
       >
         <button
           onClick={onExit}

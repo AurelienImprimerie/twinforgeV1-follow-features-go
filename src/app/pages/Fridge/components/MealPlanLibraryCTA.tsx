@@ -2,15 +2,20 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { usePerformanceMode } from '../../../../system/context/PerformanceModeContext';
+import { useUserStore } from '../../../../system/store/userStore';
+import { useActiveGenerationSession } from '../../../../hooks/useActiveGenerationSession';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import { useFeedback } from '../../../../hooks/useFeedback';
+import ActiveGenerationBanner from './ActiveGenerationBanner';
 
 const MealPlanLibraryCTA: React.FC = () => {
   const navigate = useNavigate();
   const { click } = useFeedback();
   const { isPerformanceMode } = usePerformanceMode();
+  const { session } = useUserStore();
+  const sessionInfo = useActiveGenerationSession(session?.user?.id);
 
   const MotionDiv = isPerformanceMode ? 'div' : motion.div;
 
@@ -18,6 +23,16 @@ const MealPlanLibraryCTA: React.FC = () => {
     click();
     navigate('/meal-plan-generation');
   };
+
+  if (sessionInfo.hasActiveSession && sessionInfo.currentStep && sessionInfo.sessionId && sessionInfo.updatedAt) {
+    return (
+      <ActiveGenerationBanner
+        currentStep={sessionInfo.currentStep}
+        sessionId={sessionInfo.sessionId}
+        updatedAt={sessionInfo.updatedAt}
+      />
+    );
+  }
 
   return (
     <GlassCard

@@ -440,7 +440,7 @@ const GeneratingStage: React.FC<GeneratingStageProps> = ({ onExit }) => {
           animate: { opacity: 1 },
           transition: { duration: 0.3, delay: 0.3 }
         })}
-        className="flex justify-end"
+        className="flex justify-center"
       >
         <button
           onClick={onExit}

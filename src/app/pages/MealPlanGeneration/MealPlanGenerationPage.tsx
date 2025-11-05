@@ -13,6 +13,7 @@ import ValidationStage from './stages/ValidationStage';
 import RecipeDetailsGeneratingStage from './stages/RecipeDetailsGeneratingStage';
 import RecipeDetailsValidationStage from './stages/RecipeDetailsValidationStage';
 import ResumeProgressModal from './components/ResumeProgressModal';
+import ImprovedExitConfirmationModal from '../../../ui/components/modals/ImprovedExitConfirmationModal';
 import { mealPlanProgressService } from '../../../system/services/mealPlanProgressService';
 import logger from '../../../lib/utils/logger';
 
@@ -23,6 +24,7 @@ const MealPlanGenerationPage: React.FC = () => {
   const { session } = useUserStore();
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedSessionInfo, setSavedSessionInfo] = useState<any>(null);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const {
     currentStep,
@@ -55,7 +57,7 @@ const MealPlanGenerationPage: React.FC = () => {
       if (session?.user?.id) {
         const summary = await mealPlanProgressService.getProgressSummary(session.user.id);
 
-        if (summary.hasSession && (summary.currentStep === 'validation' || summary.currentStep === 'recipe_details_validation')) {
+        if (summary.hasSession && (summary.currentStep === 'validation' || summary.currentStep === 'recipe_details_generating' || summary.currentStep === 'recipe_details_validation')) {
           setSavedSessionInfo({
             currentStep: summary.currentStep,
             sessionId: summary.sessionId,
@@ -248,14 +250,76 @@ const MealPlanGenerationPage: React.FC = () => {
     click();
 
     if (mealPlanCandidates.length > 0 && currentStep !== 'configuration') {
-      const confirmed = window.confirm(
-        'Vous avez des plans non sauvegardés. Voulez-vous vraiment quitter ?'
-      );
+      setShowExitModal(true);
+    } else {
+      resetPipeline();
+      navigate('/fridge#plans');
+    }
+  };
 
-      if (!confirmed) return;
+  const handleContinueInBackground = async () => {
+    click();
+    setShowExitModal(false);
+
+    if (currentSessionId && session?.user?.id) {
+      if (currentStep === 'recipe_details_generating') {
+        await mealPlanProgressService.updateSessionStep(currentSessionId, 'recipe_details_generating');
+      } else if (currentStep === 'validation') {
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
+      } else if (currentStep === 'recipe_details_validation') {
+        await mealPlanProgressService.updateSessionStep(currentSessionId, 'recipe_details_validation');
+      }
+    }
+
+    showToast({
+      type: 'info',
+      title: 'Génération en arrière-plan',
+      message: 'Votre génération continue. Vous recevrez une notification quand elle sera terminée.',
+      duration: 4000
+    });
+
+    navigate('/fridge#plans');
+  };
+
+  const handleStopAndReturn = async () => {
+    click();
+    setShowExitModal(false);
+
+    if (currentSessionId) {
+      if (currentStep === 'validation') {
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
+      } else if (currentStep === 'recipe_details_validation' || currentStep === 'recipe_details_generating') {
+        await mealPlanProgressService.updateSessionStep(currentSessionId, 'validation');
+      }
+    }
+
+    showToast({
+      type: 'success',
+      title: 'Progression sauvegardée',
+      message: 'Vous pouvez reprendre la génération à tout moment',
+      duration: 3000
+    });
+
+    navigate('/fridge#plans');
+  };
+
+  const handleDiscardAndExit = async () => {
+    click();
+    setShowExitModal(false);
+
+    if (currentSessionId) {
+      await clearSavedProgress();
     }
 
     resetPipeline();
+
+    showToast({
+      type: 'info',
+      title: 'Plan abandonné',
+      message: 'La génération a été annulée',
+      duration: 3000
+    });
+
     navigate('/fridge#plans');
   };
 
@@ -274,6 +338,16 @@ const MealPlanGenerationPage: React.FC = () => {
         updatedAt={savedSessionInfo?.updatedAt}
         onResume={handleResumeProgress}
         onRestart={handleRestartFromScratch}
+      />
+
+      <ImprovedExitConfirmationModal
+        isOpen={showExitModal}
+        currentStep={currentStep}
+        hasUnsavedProgress={mealPlanCandidates.length > 0}
+        onContinueInBackground={handleContinueInBackground}
+        onStopAndReturn={handleStopAndReturn}
+        onDiscardAndExit={handleDiscardAndExit}
+        onCancel={() => setShowExitModal(false)}
       />
 
       <motion.div

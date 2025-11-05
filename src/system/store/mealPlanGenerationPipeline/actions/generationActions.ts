@@ -619,6 +619,20 @@ export const createGenerationActions = (
                   timestamp: new Date().toISOString()
                 });
 
+                // Save progress to database during generation (every 3 recipes)
+                if (currentSessionId && processedMeals % 3 === 0) {
+                  await mealPlanProgressService.saveRecipesProgress(
+                    currentSessionId,
+                    get().mealPlanCandidates,
+                    true
+                  );
+                  logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Progress saved during recipe generation', {
+                    processedMeals,
+                    totalMeals,
+                    sessionId: currentSessionId
+                  });
+                }
+
                 // Trigger image generation in background (non-blocking)
                 if (detailedRecipe.imageSignature) {
                   triggerImageGeneration({
@@ -657,6 +671,15 @@ export const createGenerationActions = (
             }
           }
         }
+      }
+
+      // Save final progress with validation step
+      if (currentSessionId) {
+        await mealPlanProgressService.saveRecipesProgress(
+          currentSessionId,
+          get().mealPlanCandidates,
+          false
+        );
       }
 
       // Transition vers l'étape de validation finale
