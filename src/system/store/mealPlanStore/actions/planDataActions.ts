@@ -156,15 +156,15 @@ export const createPlanDataActions = (
 
         return {
           id: plan.id,
-          weekNumber: planData.weekNumber || 1,
-          startDate: planData.startDate || plan.start_date || plan.created_at,
+          weekNumber: plan.week_number || 1,
+          startDate: plan.start_date || plan.created_at,
           days: planData.days || [],
           createdAt: plan.created_at,
           updatedAt: plan.updated_at,
-          nutritionalSummary: planData.nutritionalSummary,
+          nutritionalSummary: plan.nutritional_summary || planData.nutritionalSummary,
           estimatedWeeklyCost: planData.estimatedWeeklyCost,
           batchCookingDays: planData.batchCookingDays,
-          aiExplanation: planData.aiExplanation
+          aiExplanation: plan.ai_explanation || planData.aiExplanation
         };
       });
 
