@@ -213,13 +213,58 @@ export const createPlanDataActions = (
           };
         });
 
+        // Calculate nutritional summary from meals if not present
+        let nutritionalSummary = plan.nutritional_summary || planData.nutritionalSummary;
+
+        // If nutritional summary is empty or missing required fields, calculate from meals
+        if (!nutritionalSummary ||
+            typeof nutritionalSummary.avgCaloriesPerDay !== 'number' ||
+            typeof nutritionalSummary.avgProteinPerDay !== 'number') {
+
+          let totalCalories = 0;
+          let totalProtein = 0;
+          let totalCarbs = 0;
+          let totalFat = 0;
+          let dayCount = 0;
+
+          transformedDays.forEach((day: any) => {
+            if (day.meals) {
+              dayCount++;
+              Object.values(day.meals).forEach((meal: any) => {
+                if (meal) {
+                  totalCalories += meal.estimatedCalories || 0;
+                  if (meal.detailedRecipe?.nutritionalInfo) {
+                    totalProtein += meal.detailedRecipe.nutritionalInfo.protein || 0;
+                    totalCarbs += meal.detailedRecipe.nutritionalInfo.carbs || 0;
+                    totalFat += meal.detailedRecipe.nutritionalInfo.fat || 0;
+                  }
+                }
+              });
+            }
+          });
+
+          if (dayCount > 0) {
+            nutritionalSummary = {
+              avgCaloriesPerDay: Math.round(totalCalories / dayCount),
+              avgProteinPerDay: Math.round(totalProtein / dayCount),
+              avgCarbsPerDay: Math.round(totalCarbs / dayCount),
+              avgFatPerDay: Math.round(totalFat / dayCount),
+              weeklyCalories: totalCalories,
+              weeklyProtein: totalProtein,
+              weeklyCarbsGrams: totalCarbs,
+              weeklyFatGrams: totalFat
+            };
+          }
+        }
+
         logger.info('MEAL_PLAN_STORE', 'Transforming meal plan', {
           planId: plan.id,
           weekNumber: plan.week_number,
           hasPlanData: !!plan.plan_data,
           originalDaysCount: planData.days?.length || 0,
           transformedDaysCount: transformedDays.length,
-          hasNutritionalSummary: !!plan.nutritional_summary,
+          hasNutritionalSummary: !!nutritionalSummary,
+          calculatedNutritionalSummary: !!(nutritionalSummary && !plan.nutritional_summary?.avgCaloriesPerDay),
           hasAiExplanation: !!plan.ai_explanation,
           timestamp: new Date().toISOString()
         });
@@ -231,7 +276,7 @@ export const createPlanDataActions = (
           days: transformedDays,
           createdAt: plan.created_at,
           updatedAt: plan.updated_at,
-          nutritionalSummary: plan.nutritional_summary || planData.nutritionalSummary,
+          nutritionalSummary,
           estimatedWeeklyCost: planData.estimatedWeeklyCost,
           batchCookingDays: planData.batchCookingDays,
           aiExplanation: plan.ai_explanation || planData.aiExplanation
