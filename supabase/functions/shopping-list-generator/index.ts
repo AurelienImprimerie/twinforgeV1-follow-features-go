@@ -231,7 +231,7 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: 'Tu es un expert en nutrition et en planification de repas. Tu aides les utilisateurs à créer des listes de courses personnalisées et optimisées.\n\nRÈGLES ABSOLUES QUE TU DOIS RESPECTER:\n1. Tu dois TOUJOURS générer une liste COMPLÈTE et DÉTAILLÉE avec un MINIMUM de 30-50 articles uniques\n2. CHAQUE catégorie doit contenir AU MINIMUM 5-10 articles\n3. Tu dois ANALYSER EN DÉTAIL chaque repas du plan alimentaire et LISTER TOUS les ingrédients\n4. Tu dois INCLURE les ingrédients de base (huile, sel, poivre, épices, condiments, etc.)\n5. Tu dois TOUJOURS retourner du JSON valide et COMPLET\n6. JAMAIS de liste minimaliste ou incomplète - c\'est INACCEPTABLE\n\nSTRUCTURE MINIMALE REQUISE:\n- Fruits & Légumes: minimum 8-12 articles\n- Viandes & Poissons: minimum 4-6 articles\n- Produits laitiers: minimum 3-5 articles\n- Épicerie: minimum 6-10 articles\n- Boulangerie: minimum 2-3 articles\n- Condiments & Épices: minimum 4-6 articles\n\nSi le plan de repas contient 7 jours de repas (petit-déjeuner, déjeuner, dîner), tu DOIS générer une liste proportionnellement complète.'
+              content: 'Tu es un expert en nutrition et en planification de repas. Tu aides les utilisateurs à créer des listes de courses personnalisées et optimisées.\n\nRÈGLES ABSOLUES QUE TU DOIS RESPECTER:\n1. Tu dois TOUJOURS générer une liste COMPLÈTE et DÉTAILLÉE avec un MINIMUM de 30-50 articles uniques\n2. CHAQUE catégorie doit contenir AU MINIMUM 5-10 articles\n3. Tu dois ANALYSER EN DÉTAIL chaque repas du plan alimentaire et LISTER TOUS les ingrédients\n4. Tu dois INCLURE les ingrédients de base (huile, sel, poivre, épices, condiments, etc.)\n5. Tu dois TOUJOURS retourner du JSON valide et COMPLET\n6. JAMAIS de liste minimaliste ou incomplète - c\'est INACCEPTABLE\n7. IMPORTANT: N\'utilise QUE des caractères JSON-safe. Évite les caractères spéciaux Unicode comme œ (utilise oe), les tirets longs — (utilise -), les apostrophes courbes \' (utilise \'), etc.\n\nSTRUCTURE MINIMALE REQUISE:\n- Fruits & Légumes: minimum 8-12 articles\n- Viandes & Poissons: minimum 4-6 articles\n- Produits laitiers: minimum 3-5 articles\n- Épicerie: minimum 6-10 articles\n- Boulangerie: minimum 2-3 articles\n- Condiments & Épices: minimum 4-6 articles\n\nSi le plan de repas contient 7 jours de repas (petit-déjeuner, déjeuner, dîner), tu DOIS générer une liste proportionnellement complète.\n\nCARACTÈRES À ÉVITER:\n- N\'utilise PAS œ (utilise oe à la place)\n- N\'utilise PAS — ou – (utilise - à la place)\n- N\'utilise PAS \' ou \' (utilise \' à la place)\n- Évite tous les caractères Unicode spéciaux qui ne sont pas standard ASCII/UTF-8'
             },
             {
               role: 'user',
@@ -543,14 +543,39 @@ function parseAIResponse(aiContent: string, country: string): ShoppingListRespon
     // Sanitize JSON string - fix common issues with control characters and malformed strings
     let jsonString = jsonMatch[0];
 
-    // Fix malformed strings with unescaped quotes inside JSON values
-    // This regex finds strings that have unescaped single quotes that break JSON
-    jsonString = jsonString.replace(/"name":\s*"([^"]*)'([^"]*)"/g, (match, before, after) => {
-      return `"name": "${before}\\'${after}"`;
+    console.log('[PARSE_SANITIZE_START] Original JSON length:', jsonString.length);
+
+    // Step 1: Replace problematic Unicode characters that break JSON.parse
+    // Replace em-dash, en-dash with regular dash
+    jsonString = jsonString.replace(/[\u2013\u2014]/g, '-');
+    // Replace special apostrophes with regular apostrophe
+    jsonString = jsonString.replace(/[\u2018\u2019]/g, "'");
+    // Replace special quotes with regular quotes
+    jsonString = jsonString.replace(/[\u201C\u201D]/g, '"');
+    // Replace œ ligature with oe
+    jsonString = jsonString.replace(/œ/g, 'oe');
+    // Replace any other problematic Unicode chars
+    jsonString = jsonString.replace(/[\u0080-\u00FF]/g, (char) => {
+      const code = char.charCodeAt(0);
+      if (code >= 0xC0 && code <= 0xFF) {
+        // Keep accented characters like é, è, à, etc.
+        return char;
+      }
+      return '?';
     });
 
-    // Remove any actual control characters (newlines, tabs in string values)
+    console.log('[PARSE_SANITIZE_UNICODE] After Unicode cleanup');
+
+    // Step 2: Fix malformed strings with unescaped quotes inside JSON values
+    // This regex finds strings that have unescaped single quotes that break JSON
+    jsonString = jsonString.replace(/"name":\s*"([^"]*)'([^"]*)"/g, (match, before, after) => {
+      return `"name": "${before}'${after}"`;
+    });
+
+    // Step 3: Remove control characters (newlines, tabs in string values)
     jsonString = jsonString.replace(/[\u0000-\u001F]+/g, ' ');
+
+    console.log('[PARSE_SANITIZE_COMPLETE] Sanitized JSON ready for parsing');
 
     const parsedResponse = JSON.parse(jsonString)
 
