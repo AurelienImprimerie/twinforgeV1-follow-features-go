@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useUserStore } from '../../../../system/store/userStore';
 import ProfileCompletenessAlert from '../../../../ui/components/profile/ProfileCompletenessAlert';
 import FridgeScanMainCTA from '../components/FridgeScanMainCTA';
-import RecentScansCard from '../components/RecentScansCard';
+import RecentScansCardEnriched from '../components/RecentScansCardEnriched';
 import ScannerStatsCard from '../components/ScannerStatsCard';
 import EmptyFridgeScannerState from './ScannerTab/EmptyFridgeScannerState';
 import { useFridgeScanPipeline } from '../../../../system/store/fridgeScan';
@@ -67,14 +67,11 @@ const ScannerTab: React.FC = () => {
       {/* CTA Principal de Scanner */}
       <FridgeScanMainCTA />
 
-      {/* Grille de composants illustratifs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Historique récent des scans */}
-        <RecentScansCard />
+      {/* Historique récent des scans avec actions */}
+      <RecentScansCardEnriched />
 
-        {/* Statistiques et insights */}
-        <ScannerStatsCard />
-      </div>
+      {/* Statistiques et insights */}
+      <ScannerStatsCard />
     </motion.div>
   );
 };

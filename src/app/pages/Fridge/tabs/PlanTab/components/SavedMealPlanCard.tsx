@@ -40,13 +40,13 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
         onClick={onClick}
         style={{
           background: `
-            radial-gradient(circle at 30% 20%, color-mix(in srgb, #10B981 8%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 30% 20%, color-mix(in srgb, #8B5CF6 8%, transparent) 0%, transparent 60%),
             rgba(11, 14, 23, 0.8)
           `,
-          borderColor: 'color-mix(in srgb, #10B981 25%, transparent)',
+          borderColor: 'color-mix(in srgb, #8B5CF6 25%, transparent)',
           boxShadow: `
             0 8px 24px rgba(0, 0, 0, 0.2),
-            0 0 20px color-mix(in srgb, #10B981 15%, transparent)
+            0 0 20px color-mix(in srgb, #8B5CF6 15%, transparent)
           `
         }}
       >
@@ -57,8 +57,8 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #10B981, #34D399)',
-                  boxShadow: '0 0 16px rgba(16, 185, 129, 0.4)'
+                  background: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+                  boxShadow: '0 0 16px rgba(139, 92, 246, 0.4)'
                 }}
               >
                 <SpatialIcon
@@ -90,17 +90,17 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
             <div
               className="p-3 rounded-lg"
               style={{
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.2)'
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.2)'
               }}
             >
               <div className="flex items-center gap-2 mb-1">
                 <SpatialIcon
                   Icon={ICONS.Calendar}
                   size={16}
-                  className="text-green-400"
+                  className="text-purple-400"
                 />
-                <span className="text-green-400 text-xs font-medium">Jours</span>
+                <span className="text-purple-400 text-xs font-medium">Jours</span>
               </div>
               <p className="text-white text-xl font-bold">{totalDays}</p>
             </div>
@@ -109,17 +109,17 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
             <div
               className="p-3 rounded-lg"
               style={{
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.2)'
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.2)'
               }}
             >
               <div className="flex items-center gap-2 mb-1">
                 <SpatialIcon
                   Icon={ICONS.UtensilsCrossed}
                   size={16}
-                  className="text-green-400"
+                  className="text-purple-400"
                 />
-                <span className="text-green-400 text-xs font-medium">Repas</span>
+                <span className="text-purple-400 text-xs font-medium">Repas</span>
               </div>
               <p className="text-white text-xl font-bold">{totalMeals}</p>
             </div>
@@ -130,17 +130,17 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
             <div
               className="p-3 rounded-lg"
               style={{
-                background: 'rgba(16, 185, 129, 0.05)',
-                border: '1px solid rgba(16, 185, 129, 0.15)'
+                background: 'rgba(139, 92, 246, 0.05)',
+                border: '1px solid rgba(139, 92, 246, 0.15)'
               }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <SpatialIcon
                   Icon={ICONS.Activity}
                   size={14}
-                  className="text-green-300"
+                  className="text-purple-300"
                 />
-                <span className="text-green-300 text-xs font-medium">
+                <span className="text-purple-300 text-xs font-medium">
                   Moyenne journalière
                 </span>
               </div>
@@ -177,7 +177,7 @@ const SavedMealPlanCard: React.FC<SavedMealPlanCardProps> = ({ plan, onClick }) 
           {plan.estimatedWeeklyCost && (
             <div className="flex items-center justify-between">
               <span className="text-white/60 text-sm">Coût estimé</span>
-              <span className="text-green-400 font-semibold">
+              <span className="text-purple-400 font-semibold">
                 {plan.estimatedWeeklyCost.toFixed(2)}€
               </span>
             </div>

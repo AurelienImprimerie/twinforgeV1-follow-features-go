@@ -3,10 +3,12 @@ import { motion } from 'framer-motion';
 import MealPlanLibraryCTA from '../components/MealPlanLibraryCTA';
 import SavedMealPlanCard from './PlanTab/components/SavedMealPlanCard';
 import MealPlanDetailModal from './PlanTab/components/MealPlanDetailModal';
+import PlanFilterSystem from './PlanTab/components/PlanFilterSystem';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import { useMealPlanStore } from '../../../../system/store/mealPlanStore';
+import { usePlanFiltering } from './PlanTab/hooks/usePlanFiltering';
 import type { MealPlanData } from '../../../../system/store/mealPlanStore/types';
 
 /**
@@ -18,6 +20,21 @@ const PlanTab: React.FC = () => {
   const { allMealPlans, loadAllMealPlans } = useMealPlanStore();
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<MealPlanData | null>(null);
+
+  // Filtering logic
+  const {
+    searchFilter,
+    setSearchFilter,
+    minDays,
+    setMinDays,
+    maxDays,
+    setMaxDays,
+    minCalories,
+    setMinCalories,
+    maxCalories,
+    setMaxCalories,
+    filteredPlans
+  } = usePlanFiltering({ allPlans: allMealPlans });
 
   // Load meal plans on mount
   useEffect(() => {
@@ -55,6 +72,24 @@ const PlanTab: React.FC = () => {
       {/* CTA pour Générer des Plans Alimentaires */}
       <MealPlanLibraryCTA />
 
+      {/* Filter System - Only shown when we have plans */}
+      {!isLoading && allMealPlans.length > 0 && (
+        <PlanFilterSystem
+          searchFilter={searchFilter}
+          setSearchFilter={setSearchFilter}
+          minDays={minDays}
+          setMinDays={setMinDays}
+          maxDays={maxDays}
+          setMaxDays={setMaxDays}
+          minCalories={minCalories}
+          setMinCalories={setMinCalories}
+          maxCalories={maxCalories}
+          setMaxCalories={setMaxCalories}
+          plansCount={filteredPlans.length}
+          totalPlansCount={allMealPlans.length}
+        />
+      )}
+
       {/* Loading State */}
       {isLoading && (
         <GlassCard
@@ -72,32 +107,43 @@ const PlanTab: React.FC = () => {
       )}
 
       {/* Meal Plans Grid */}
-      {!isLoading && allMealPlans.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <SpatialIcon
-              Icon={ICONS.BookOpen}
-              size={24}
-              className="text-green-400"
+      {!isLoading && filteredPlans.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPlans.map((plan) => (
+            <SavedMealPlanCard
+              key={plan.id}
+              plan={plan}
+              onClick={() => handlePlanClick(plan)}
             />
-            <h2 className="text-white text-2xl font-bold">
-              Mes Plans Alimentaires
-            </h2>
-            <span className="px-3 py-1 bg-green-400/20 text-green-400 text-sm font-semibold rounded-full">
-              {allMealPlans.length}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allMealPlans.map((plan) => (
-              <SavedMealPlanCard
-                key={plan.id}
-                plan={plan}
-                onClick={() => handlePlanClick(plan)}
-              />
-            ))}
-          </div>
+          ))}
         </div>
+      )}
+
+      {/* No Results After Filtering */}
+      {!isLoading && allMealPlans.length > 0 && filteredPlans.length === 0 && (
+        <GlassCard
+          className="p-8 text-center"
+          style={{
+            background: 'rgba(11, 14, 23, 0.8)',
+            borderColor: 'rgba(139, 92, 246, 0.2)'
+          }}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <SpatialIcon
+              Icon={ICONS.Search}
+              size={48}
+              className="text-purple-400/50"
+            />
+            <div>
+              <h3 className="text-white text-xl font-bold mb-2">
+                Aucun plan trouvé
+              </h3>
+              <p className="text-white/70">
+                Essayez de modifier vos filtres
+              </p>
+            </div>
+          </div>
+        </GlassCard>
       )}
 
       {/* Empty State */}

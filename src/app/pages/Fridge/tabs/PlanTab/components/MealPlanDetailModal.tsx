@@ -135,15 +135,15 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
               className="p-6"
               style={{
                 background: `
-                  radial-gradient(circle at 30% 20%, color-mix(in srgb, #10B981 12%, transparent) 0%, transparent 60%),
-                  radial-gradient(circle at 70% 80%, color-mix(in srgb, #10B981 8%, transparent) 0%, transparent 50%),
+                  radial-gradient(circle at 30% 20%, color-mix(in srgb, #8B5CF6 12%, transparent) 0%, transparent 60%),
+                  radial-gradient(circle at 70% 80%, color-mix(in srgb, #A855F7 8%, transparent) 0%, transparent 50%),
                   linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.10)),
                   rgba(11, 14, 23, 0.95)
                 `,
-                borderColor: 'color-mix(in srgb, #10B981 30%, transparent)',
+                borderColor: 'color-mix(in srgb, #8B5CF6 30%, transparent)',
                 boxShadow: `
                   0 25px 80px rgba(0, 0, 0, 0.6),
-                  0 0 60px color-mix(in srgb, #10B981 30%, transparent),
+                  0 0 60px color-mix(in srgb, #8B5CF6 30%, transparent),
                   inset 0 3px 0 rgba(255, 255, 255, 0.3),
                   inset 0 -3px 0 rgba(0, 0, 0, 0.2)
                 `,
@@ -171,8 +171,8 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                   <div
                     className="w-16 h-16 rounded-full flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, #10B981, #34D399)',
-                      boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)'
+                      background: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+                      boxShadow: '0 0 20px rgba(139, 92, 246, 0.5)'
                     }}
                   >
                     <SpatialIcon
@@ -203,22 +203,22 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                   <div
                     className="p-4 rounded-xl text-center"
                     style={{
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                      background: 'rgba(139, 92, 246, 0.1)',
+                      border: '1px solid rgba(139, 92, 246, 0.2)'
                     }}
                   >
-                    <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-green-400 mx-auto mb-2" />
+                    <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-purple-400 mx-auto mb-2" />
                     <div className="text-white text-2xl font-bold">{plan.days.length}</div>
                     <div className="text-white/60 text-sm">Jours</div>
                   </div>
                   <div
                     className="p-4 rounded-xl text-center"
                     style={{
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                      background: 'rgba(139, 92, 246, 0.1)',
+                      border: '1px solid rgba(139, 92, 246, 0.2)'
                     }}
                   >
-                    <SpatialIcon Icon={ICONS.UtensilsCrossed} size={20} className="text-green-400 mx-auto mb-2" />
+                    <SpatialIcon Icon={ICONS.UtensilsCrossed} size={20} className="text-purple-400 mx-auto mb-2" />
                     <div className="text-white text-2xl font-bold">
                       {plan.days.reduce((sum, day) => sum + Object.values(day.meals || {}).filter(m => m).length, 0)}
                     </div>
@@ -232,7 +232,7 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                         border: '1px solid rgba(16, 185, 129, 0.2)'
                       }}
                     >
-                      <SpatialIcon Icon={ICONS.Activity} size={20} className="text-green-400 mx-auto mb-2" />
+                      <SpatialIcon Icon={ICONS.Activity} size={20} className="text-purple-400 mx-auto mb-2" />
                       <div className="text-white text-2xl font-bold">
                         {Math.round(plan.nutritionalSummary.avgCaloriesPerDay)}
                       </div>
@@ -247,12 +247,12 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                 <div
                   className="mb-6 p-4 rounded-xl"
                   style={{
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    border: '1px solid rgba(16, 185, 129, 0.15)'
+                    background: 'rgba(139, 92, 246, 0.05)',
+                    border: '1px solid rgba(139, 92, 246, 0.15)'
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <SpatialIcon Icon={ICONS.Sparkles} size={18} className="text-green-400" />
+                    <SpatialIcon Icon={ICONS.Sparkles} size={18} className="text-purple-400" />
                     <h4 className="text-white font-semibold">Stratégie Nutritionnelle</h4>
                   </div>
                   <p className="text-white/70 text-sm leading-relaxed">
@@ -270,7 +270,7 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                     <div key={`week-${weekIndex}`}>
                       {weekCount > 1 && (
                         <h3 className="text-white text-xl font-bold mb-4 flex items-center gap-2">
-                          <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-green-400" />
+                          <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-purple-400" />
                           Semaine {weekIndex + 1}
                         </h3>
                       )}
@@ -312,8 +312,8 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                     onClick={() => handleMealClick(meal, mealType, day.date)}
                                     className="w-full text-left rounded-lg overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     style={{
-                                      background: 'rgba(16, 185, 129, 0.1)',
-                                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                                      background: 'rgba(139, 92, 246, 0.1)',
+                                      border: '1px solid rgba(139, 92, 246, 0.2)'
                                     }}
                                   >
                                     {/* Meal Image */}
@@ -329,13 +329,13 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                       <div
                                         className="w-full h-24 flex items-center justify-center"
                                         style={{
-                                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))'
+                                          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))'
                                         }}
                                       >
                                         <SpatialIcon
                                           Icon={mealIcons[mealType as keyof typeof mealIcons] || ICONS.UtensilsCrossed}
                                           size={32}
-                                          className="text-green-400/60"
+                                          className="text-purple-400/60"
                                         />
                                       </div>
                                     )}
@@ -346,9 +346,9 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                         <SpatialIcon
                                           Icon={mealIcons[mealType as keyof typeof mealIcons] || ICONS.UtensilsCrossed}
                                           size={12}
-                                          className="text-green-400"
+                                          className="text-purple-400"
                                         />
-                                        <span className="text-green-400 text-xs font-medium capitalize">
+                                        <span className="text-purple-400 text-xs font-medium capitalize">
                                           {mealType === 'breakfast' ? 'Petit-déj' :
                                            mealType === 'lunch' ? 'Déjeuner' :
                                            mealType === 'dinner' ? 'Dîner' : 'Snack'}
@@ -358,7 +358,7 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                         {meal.mealName}
                                       </p>
                                       {meal.estimatedCalories && (
-                                        <p className="text-green-400/80 text-xs">
+                                        <p className="text-purple-400/80 text-xs">
                                           {meal.estimatedCalories} kcal
                                         </p>
                                       )}
@@ -380,12 +380,12 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                 <div
                   className="mt-6 p-4 rounded-xl"
                   style={{
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    border: '1px solid rgba(16, 185, 129, 0.15)'
+                    background: 'rgba(139, 92, 246, 0.05)',
+                    border: '1px solid rgba(139, 92, 246, 0.15)'
                   }}
                 >
                   <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <SpatialIcon Icon={ICONS.Activity} size={18} className="text-green-400" />
+                    <SpatialIcon Icon={ICONS.Activity} size={18} className="text-purple-400" />
                     Résumé Nutritionnel Moyen
                   </h4>
                   <div className="grid grid-cols-4 gap-4">
