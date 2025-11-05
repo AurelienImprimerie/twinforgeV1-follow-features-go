@@ -56,6 +56,29 @@ const MealPlanRecipeCard: React.FC<MealPlanRecipeCardProps> = ({
     });
   }, [meal.id, meal.name, meal.type, dayIndex, isGenerated, meal.detailedRecipe, meal.recipeGenerated, meal.status, hasImage]);
 
+  // LOG IMAGE URL CHANGES SPECIFICALLY
+  React.useEffect(() => {
+    if (meal.detailedRecipe?.imageUrl) {
+      console.log('📸 IMAGE URL CHANGED/SET', {
+        mealId: meal.id,
+        mealName: meal.name,
+        recipeId: meal.detailedRecipe.id,
+        imageUrl: meal.detailedRecipe.imageUrl,
+        hasImage: true,
+        timestamp: new Date().toISOString()
+      });
+    } else if (meal.detailedRecipe) {
+      console.log('⏳ RECIPE EXISTS BUT NO IMAGE YET', {
+        mealId: meal.id,
+        mealName: meal.name,
+        recipeId: meal.detailedRecipe.id,
+        imageUrl: null,
+        hasImage: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [meal.detailedRecipe?.imageUrl, meal.id, meal.name, meal.detailedRecipe?.id]);
+
   // LOG IMAGE LOAD SUCCESS
   const handleImageLoad = React.useCallback(() => {
     console.log('✅ IMAGE LOADED SUCCESSFULLY', {

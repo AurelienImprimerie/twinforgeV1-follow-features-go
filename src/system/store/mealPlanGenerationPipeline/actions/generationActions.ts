@@ -57,17 +57,41 @@ async function triggerImageGeneration(params: ImageGenerationParams): Promise<vo
     if (response.ok) {
       const result = await response.json();
 
-      logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Background image generation successful', {
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', '🖼️ Background image generation successful', {
         recipeId,
         imageUrl: result.image_url,
         generationMethod: result.generation_method,
         cached: result.cache_hit,
         costUsd: result.cost_usd,
+        planId,
+        dayIndex,
+        mealId,
         timestamp: new Date().toISOString()
       });
 
-      // Note: We don't update the state here since the image is stored in the database
-      // and will be fetched when the meal plan is loaded
+      // CRITICAL: Update the state with the image URL so it displays immediately
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', '🔄 Calling updateMealImageUrl to update UI', {
+        recipeId,
+        imageUrl: result.image_url,
+        timestamp: new Date().toISOString()
+      });
+
+      // Get the store's updateMealImageUrl function
+      const currentState = get();
+      if (currentState.updateMealImageUrl) {
+        currentState.updateMealImageUrl(recipeId, result.image_url);
+        logger.info('MEAL_PLAN_GENERATION_PIPELINE', '✅ updateMealImageUrl called successfully', {
+          recipeId,
+          imageUrl: result.image_url,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        logger.error('MEAL_PLAN_GENERATION_PIPELINE', '❌ updateMealImageUrl not available in state!', {
+          recipeId,
+          availableMethods: Object.keys(currentState).filter(k => typeof currentState[k as keyof typeof currentState] === 'function'),
+          timestamp: new Date().toISOString()
+        });
+      }
     } else {
       logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Background image generation failed', {
         recipeId,
@@ -1110,6 +1134,28 @@ export const createGenerationActions = (
     logger.info('MEAL_PLAN_GENERATION_PIPELINE', '🖼️ IMAGE GENERATION COMPLETE - Updating meal image URL', {
       recipeId,
       imageUrl,
+      timestamp: new Date().toISOString()
+    });
+
+    // LOG CURRENT STATE BEFORE UPDATE
+    const beforeState = get();
+    logger.info('MEAL_PLAN_GENERATION_PIPELINE', '📊 STATE BEFORE IMAGE UPDATE', {
+      recipeId,
+      candidatesCount: beforeState.mealPlanCandidates.length,
+      allMeals: beforeState.mealPlanCandidates.flatMap((plan, planIdx) =>
+        plan.days.flatMap((day, dayIdx) =>
+          day.meals.map(meal => ({
+            planIdx,
+            dayIdx,
+            mealId: meal.id,
+            mealName: meal.name,
+            recipeId: meal.detailedRecipe?.id,
+            hasDetailedRecipe: !!meal.detailedRecipe,
+            currentImageUrl: meal.detailedRecipe?.imageUrl,
+            recipeGenerated: meal.recipeGenerated
+          }))
+        )
+      ),
       timestamp: new Date().toISOString()
     });
 
