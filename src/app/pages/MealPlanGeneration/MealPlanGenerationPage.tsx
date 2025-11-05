@@ -42,6 +42,7 @@ const MealPlanGenerationPage: React.FC = () => {
     generateDetailedRecipes,
     saveMealPlans,
     discardMealPlans,
+    cancelGeneration,
     resetPipeline,
     loadProgressFromDatabase,
     clearSavedProgress
@@ -309,18 +310,30 @@ const MealPlanGenerationPage: React.FC = () => {
     click();
     setShowExitModal(false);
 
+    // Cancel ongoing generation
+    showToast({
+      type: 'info',
+      title: 'Arrêt en cours...',
+      message: 'Arrêt de la génération',
+      duration: 2000
+    });
+
+    await cancelGeneration();
+
+    // Save current progress
     if (currentSessionId) {
       if (currentStep === 'validation') {
         await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
-      } else if (currentStep === 'recipe_details_validation' || currentStep === 'recipe_details_generating') {
-        await mealPlanProgressService.updateSessionStep(currentSessionId, 'validation');
+      } else if (currentStep === 'generating' || currentStep === 'enriching') {
+        // Save whatever we have so far
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
       }
     }
 
     showToast({
       type: 'success',
-      title: 'Progression sauvegardée',
-      message: 'Vous pouvez reprendre la génération à tout moment',
+      title: 'Génération arrêtée',
+      message: 'Votre progression a été sauvegardée',
       duration: 3000
     });
 
@@ -331,6 +344,17 @@ const MealPlanGenerationPage: React.FC = () => {
     click();
     setShowExitModal(false);
 
+    // Cancel ongoing generation first
+    showToast({
+      type: 'info',
+      title: 'Arrêt en cours...',
+      message: 'Annulation de la génération',
+      duration: 2000
+    });
+
+    await cancelGeneration();
+
+    // Clear all progress
     if (currentSessionId) {
       await clearSavedProgress();
     }
@@ -340,7 +364,7 @@ const MealPlanGenerationPage: React.FC = () => {
     showToast({
       type: 'info',
       title: 'Plan abandonné',
-      message: 'La génération a été annulée',
+      message: 'La génération a été annulée et supprimée',
       duration: 3000
     });
 

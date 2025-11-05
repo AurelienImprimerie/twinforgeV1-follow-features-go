@@ -24,6 +24,8 @@ export const useMealPlanGenerationPipeline = create<MealPlanGenerationPipelineSt
       mealPlanCandidates: [],
       loadingState: 'idle',
       loadingMessage: '',
+      abortController: null,
+      isCancelling: false,
       steps: MEAL_PLAN_GENERATION_STEPS,
       config: {
         selectedInventoryId: null,
@@ -48,7 +50,7 @@ export const useMealPlanGenerationPipeline = create<MealPlanGenerationPipelineSt
       },
 
       // Loading state action
-      setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'generating_recipes' | 'streaming_recipes') => {
+      setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving' | 'cancelling') => {
         set({ loadingState: state });
 
         logger.debug('MEAL_PLAN_GENERATION_PIPELINE', 'Loading state updated', {

@@ -17,10 +17,11 @@ interface ImageGenerationParams {
   planId: string;
   dayIndex: number;
   mealId: string;
+  signal?: AbortSignal;
 }
 
 async function triggerImageGeneration(params: ImageGenerationParams): Promise<void> {
-  const { recipeId, recipeDetails, imageSignature, userId, accessToken, planId, dayIndex, mealId } = params;
+  const { recipeId, recipeDetails, imageSignature, userId, accessToken, planId, dayIndex, mealId, signal } = params;
 
   logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Triggering background image generation', {
     recipeId,
@@ -49,7 +50,8 @@ async function triggerImageGeneration(params: ImageGenerationParams): Promise<vo
         },
         image_signature: imageSignature,
         user_id: userId
-      })
+      }),
+      signal
     });
 
     if (response.ok) {
@@ -74,6 +76,12 @@ async function triggerImageGeneration(params: ImageGenerationParams): Promise<vo
       });
     }
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Image generation cancelled', {
+        recipeId
+      });
+      return;
+    }
     logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Background image generation error', {
       recipeId,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -93,10 +101,11 @@ interface EnrichMealParams {
   userId: string;
   accessToken: string;
   userPreferences: any;
+  signal?: AbortSignal;
 }
 
 async function enrichMealWithRecipeDetails(params: EnrichMealParams): Promise<any | null> {
-  const { meal, userId, accessToken, userPreferences } = params;
+  const { meal, userId, accessToken, userPreferences, signal } = params;
 
   const startTime = Date.now();
   logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Starting recipe enrichment', {
@@ -122,7 +131,8 @@ async function enrichMealWithRecipeDetails(params: EnrichMealParams): Promise<an
         user_preferences: userPreferences,
         meal_type: meal.type,
         target_calories: meal.calories
-      })
+      }),
+      signal
     });
 
     if (!response.ok) {
@@ -164,6 +174,13 @@ async function enrichMealWithRecipeDetails(params: EnrichMealParams): Promise<an
 
     return detailedRecipe;
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Recipe enrichment cancelled', {
+        mealId: meal.id,
+        mealName: meal.name
+      });
+      return null;
+    }
     logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Recipe enrichment error', {
       mealId: meal.id,
       mealName: meal.name,
@@ -177,6 +194,7 @@ export interface GenerationActions {
   generateMealPlans: () => Promise<void>;
   saveMealPlans: (withRecipes: boolean) => Promise<void>;
   discardMealPlans: () => void;
+  cancelGeneration: () => Promise<void>;
   updateMealPlanStatus: (planId: string, status: 'loading' | 'ready') => void;
   updateMealStatus: (planId: string, mealId: string, status: 'loading' | 'ready', recipe?: any) => void;
   updateMealWithDetailedRecipe: (planId: string, mealId: string, detailedRecipe: any) => void;
@@ -203,6 +221,10 @@ export const createGenerationActions = (
     if (!userId) {
       throw new Error('Utilisateur non authentifié');
     }
+
+    // Create AbortController for cancellation support
+    const abortController = new AbortController();
+    set({ abortController });
 
     logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Starting meal plan generation', {
       config,
@@ -309,7 +331,8 @@ export const createGenerationActions = (
             inventory_count: 0,
             has_preferences: true,
             batch_cooking_enabled: config.batchCooking || false
-          })
+          }),
+          signal: abortController.signal
         });
 
         if (!response.ok) {
@@ -481,6 +504,11 @@ export const createGenerationActions = (
 
                       // Enrich ALL meals of this day in parallel
                       const enrichmentPromises = mealsToEnrich.map(async (meal) => {
+                        // Check if cancelled before enriching
+                        if (get().isCancelling) {
+                          return null;
+                        }
+
                         const detailedRecipe = await enrichMealWithRecipeDetails({
                           meal: {
                             id: meal.id,
@@ -491,7 +519,8 @@ export const createGenerationActions = (
                           },
                           userId,
                           accessToken: session?.access_token || '',
-                          userPreferences
+                          userPreferences,
+                          signal: abortController.signal
                         });
 
                         if (detailedRecipe) {
@@ -550,7 +579,7 @@ export const createGenerationActions = (
                           });
 
                           // Trigger image generation in parallel (non-blocking)
-                          if (detailedRecipe.imageSignature) {
+                          if (detailedRecipe.imageSignature && !get().isCancelling) {
                             triggerImageGeneration({
                               recipeId: detailedRecipe.id,
                               recipeDetails: {
@@ -563,7 +592,8 @@ export const createGenerationActions = (
                               accessToken: session?.access_token || '',
                               planId: plan.id,
                               dayIndex: currentDayIndex,
-                              mealId: meal.id
+                              mealId: meal.id,
+                              signal: abortController.signal
                             }).catch((imgError) => {
                               logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Image generation failed (non-blocking)', {
                                 mealId: meal.id,
@@ -714,6 +744,21 @@ export const createGenerationActions = (
       });
 
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Generation cancelled by user', {
+          sessionId: currentSessionId,
+          timestamp: new Date().toISOString()
+        });
+
+        set({
+          loadingState: 'idle',
+          isCancelling: false,
+          abortController: null
+        });
+
+        return;
+      }
+
       logger.error('MEAL_PLAN_GENERATION_PIPELINE', 'Generation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         sessionId: currentSessionId,
@@ -722,10 +767,15 @@ export const createGenerationActions = (
 
       set({
         loadingState: 'idle',
-        currentStep: 'configuration'
+        currentStep: 'configuration',
+        abortController: null,
+        isCancelling: false
       });
 
       throw error;
+    } finally {
+      // Cleanup AbortController
+      set({ abortController: null });
     }
   },
 
@@ -883,6 +933,41 @@ export const createGenerationActions = (
     });
   },
 
+  cancelGeneration: async () => {
+    const state = get();
+    const { abortController, currentSessionId } = state;
+
+    logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Cancelling generation', {
+      sessionId: currentSessionId,
+      hasAbortController: !!abortController,
+      timestamp: new Date().toISOString()
+    });
+
+    // Set cancelling flag to stop new enrichments
+    set({
+      isCancelling: true,
+      loadingState: 'cancelling',
+      loadingMessage: 'Arrêt en cours...'
+    });
+
+    // Abort ongoing fetch requests
+    if (abortController) {
+      abortController.abort();
+      logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'AbortController.abort() called', {
+        sessionId: currentSessionId
+      });
+    }
+
+    // Wait a bit for abort to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Generation cancelled successfully', {
+      sessionId: currentSessionId,
+      timestamp: new Date().toISOString()
+    });
+
+    // State cleanup is handled by the catch block in generateMealPlans
+  },
 
   updateMealPlanStatus: (planId: string, status: 'loading' | 'ready') => {
     set(state => ({

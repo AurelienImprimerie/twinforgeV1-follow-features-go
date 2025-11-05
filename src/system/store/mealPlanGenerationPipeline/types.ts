@@ -112,8 +112,12 @@ export interface MealPlanGenerationPipelineState {
   mealPlanCandidates: MealPlan[];
 
   // Loading states
-  loadingState: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving';
+  loadingState: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving' | 'cancelling';
   loadingMessage: string;
+
+  // Cancellation state
+  abortController: AbortController | null;
+  isCancelling: boolean;
 
   // Steps configuration
   steps: MealPlanGenerationStepData[];
@@ -126,7 +130,8 @@ export interface MealPlanGenerationPipelineState {
   saveMealPlans: (withRecipes: boolean) => Promise<void>;
   discardMealPlans: () => void;
   resetPipeline: () => void;
-  setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving') => void;
+  cancelGeneration: () => Promise<void>;
+  setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving' | 'cancelling') => void;
   updateMealWithDetailedRecipe: (planId: string, mealId: string, detailedRecipe: DetailedRecipe) => void;
   updateMealPlanStatus: (planId: string, status: 'loading' | 'ready') => void;
   updateMealStatus: (planId: string, mealId: string, status: 'loading' | 'ready', recipe?: Recipe) => void;
