@@ -36,29 +36,37 @@ import { AuthForm } from './app/components/AuthForm';
 import { LoadingFallback } from './app/components/LoadingFallback';
 import { useUserStore } from './system/store/userStore';
 
+// Core pages
 const Home = lazy(() => import('./app/pages/Home'));
 const Profile = lazy(() => import('./app/pages/Profile'));
-const ActivityPage = lazy(() => import('./app/pages/ActivityPage'));
-const FastingPage = lazy(() => import('./app/pages/Fasting/FastingPage'));
+const SettingsPage = lazy(() => import('./app/pages/SettingsPage'));
+const NotificationsPage = lazy(() => import('./app/pages/NotificationsPage'));
+
+// Forge Culinaire (Nutrition) - ACTIVE
 const MealsPage = lazy(() => import('./app/pages/Meals/MealsPage'));
 const MealScanFlowPage = lazy(() => import('./app/pages/Meals/MealScanFlowPage'));
 const FridgePage = lazy(() => import('./app/pages/FridgePage'));
-const TrainingPage = lazy(() => import('./app/pages/TrainingPage'));
-const SettingsPage = lazy(() => import('./app/pages/SettingsPage'));
-const NotificationsPage = lazy(() => import('./app/pages/NotificationsPage'));
-const BodyScanPage = lazy(() => import('./app/pages/BodyScanPage'));
-const AvatarPage = lazy(() => import('./app/pages/Avatar/AvatarPage'));
-const BodyScan = lazy(() => import('./app/pages/BodyScan'));
-const BodyScanCelebrationWithHeader = lazy(() => import('./app/pages/BodyScan/BodyScanCelebrationWithHeader'));
-const BodyScanReviewWithHeader = lazy(() => import('./app/pages/BodyScan/BodyScanReviewWithHeader'));
-const ActivityInputPage = lazy(() => import('./app/pages/Activity/ActivityInputPage'));
-const FastingInputPage = lazy(() => import('./app/pages/Fasting/FastingInputPage'));
 const FridgeScanPage = lazy(() => import('./app/pages/FridgeScanPage'));
 const RecipeGenerationPage = lazy(() => import('./app/pages/RecipeGeneration/RecipeGenerationPage'));
 const MealPlanGenerationPage = lazy(() => import('./app/pages/MealPlanGeneration/MealPlanGenerationPage'));
-const VitalPage = lazy(() => import('./app/pages/VitalPage'));
+const ShoppingListGenerationPage = lazy(() => import('./app/pages/ShoppingListGeneration/ShoppingListGenerationPage'));
+
+// Dev pages
 const DevCachePage = lazy(() => import('./app/pages/DevCachePage'));
 const LogoGalleryPage = lazy(() => import('./app/pages/LogoGalleryPage'));
+
+// Forges in standby - uncomment when needed
+// const ActivityPage = lazy(() => import('./app/pages/ActivityPage'));
+// const ActivityInputPage = lazy(() => import('./app/pages/Activity/ActivityInputPage'));
+// const FastingPage = lazy(() => import('./app/pages/Fasting/FastingPage'));
+// const FastingInputPage = lazy(() => import('./app/pages/Fasting/FastingInputPage'));
+// const TrainingPage = lazy(() => import('./app/pages/TrainingPage'));
+// const BodyScanPage = lazy(() => import('./app/pages/BodyScanPage'));
+// const AvatarPage = lazy(() => import('./app/pages/Avatar/AvatarPage'));
+// const BodyScan = lazy(() => import('./app/pages/BodyScan'));
+// const BodyScanCelebrationWithHeader = lazy(() => import('./app/pages/BodyScan/BodyScanCelebrationWithHeader'));
+// const BodyScanReviewWithHeader = lazy(() => import('./app/pages/BodyScan/BodyScanReviewWithHeader'));
+// const VitalPage = lazy(() => import('./app/pages/VitalPage'));
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -156,6 +164,7 @@ const router = createBrowserRouter([
         path: "profile",
         element: <Suspense fallback={<LoadingFallback />}><Profile /></Suspense>
       },
+      // Forge Culinaire (Nutrition) - ACTIVE
       {
         path: "meals",
         element: <Suspense fallback={<LoadingFallback />}><MealsPage /></Suspense>
@@ -163,22 +172,6 @@ const router = createBrowserRouter([
       {
         path: "meals/scan",
         element: <Suspense fallback={<LoadingFallback />}><MealScanFlowPage /></Suspense>
-      },
-      {
-        path: "activity",
-        element: <Suspense fallback={<LoadingFallback />}><ActivityPage /></Suspense>
-      },
-      {
-        path: "activity/input",
-        element: <Suspense fallback={<LoadingFallback />}><ActivityInputPage /></Suspense>
-      },
-      {
-        path: "fasting",
-        element: <Suspense fallback={<LoadingFallback />}><FastingPage /></Suspense>
-      },
-      {
-        path: "fasting/input",
-        element: <Suspense fallback={<LoadingFallback />}><FastingInputPage /></Suspense>
       },
       {
         path: "fridge",
@@ -197,9 +190,10 @@ const router = createBrowserRouter([
         element: <Suspense fallback={<LoadingFallback />}><MealPlanGenerationPage /></Suspense>
       },
       {
-        path: "training",
-        element: <Suspense fallback={<LoadingFallback />}><TrainingPage /></Suspense>
+        path: "shopping-list-generation",
+        element: <Suspense fallback={<LoadingFallback />}><ShoppingListGenerationPage /></Suspense>
       },
+      // Core pages
       {
         path: "settings",
         element: <Suspense fallback={<LoadingFallback />}><SettingsPage /></Suspense>
@@ -208,26 +202,47 @@ const router = createBrowserRouter([
         path: "notifications",
         element: <Suspense fallback={<LoadingFallback />}><NotificationsPage /></Suspense>
       },
-      {
-        path: "avatar",
-        element: <Suspense fallback={<LoadingFallback />}><AvatarPage /></Suspense>
-      },
-      {
-        path: "body-scan",
-        element: <Suspense fallback={<LoadingFallback />}><BodyScan /></Suspense>
-      },
-      {
-        path: "body-scan/celebration",
-        element: <Suspense fallback={<LoadingFallback />}><BodyScanCelebrationWithHeader /></Suspense>
-      },
-      {
-        path: "body-scan/review",
-        element: <Suspense fallback={<LoadingFallback />}><BodyScanReviewWithHeader /></Suspense>
-      },
-      {
-        path: "vital",
-        element: <Suspense fallback={<LoadingFallback />}><VitalPage /></Suspense>
-      },
+      // Routes in standby - uncomment when needed
+      // {
+      //   path: "activity",
+      //   element: <Suspense fallback={<LoadingFallback />}><ActivityPage /></Suspense>
+      // },
+      // {
+      //   path: "activity/input",
+      //   element: <Suspense fallback={<LoadingFallback />}><ActivityInputPage /></Suspense>
+      // },
+      // {
+      //   path: "fasting",
+      //   element: <Suspense fallback={<LoadingFallback />}><FastingPage /></Suspense>
+      // },
+      // {
+      //   path: "fasting/input",
+      //   element: <Suspense fallback={<LoadingFallback />}><FastingInputPage /></Suspense>
+      // },
+      // {
+      //   path: "training",
+      //   element: <Suspense fallback={<LoadingFallback />}><TrainingPage /></Suspense>
+      // },
+      // {
+      //   path: "avatar",
+      //   element: <Suspense fallback={<LoadingFallback />}><AvatarPage /></Suspense>
+      // },
+      // {
+      //   path: "body-scan",
+      //   element: <Suspense fallback={<LoadingFallback />}><BodyScan /></Suspense>
+      // },
+      // {
+      //   path: "body-scan/celebration",
+      //   element: <Suspense fallback={<LoadingFallback />}><BodyScanCelebrationWithHeader /></Suspense>
+      // },
+      // {
+      //   path: "body-scan/review",
+      //   element: <Suspense fallback={<LoadingFallback />}><BodyScanReviewWithHeader /></Suspense>
+      // },
+      // {
+      //   path: "vital",
+      //   element: <Suspense fallback={<LoadingFallback />}><VitalPage /></Suspense>
+      // },
       {
         path: "dev/cache",
         element: <Suspense fallback={<LoadingFallback />}><DevCachePage /></Suspense>

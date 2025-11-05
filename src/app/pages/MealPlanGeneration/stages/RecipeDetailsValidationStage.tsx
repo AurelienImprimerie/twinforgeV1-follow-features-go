@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { usePerformanceMode } from '../../../../system/context/PerformanceModeContext';
+import { useRecipeImageRealtime } from '../../../../hooks/useRecipeImageRealtime';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import RecipeDetailModal from '../../../pages/Fridge/tabs/RecipesTab/components/RecipeDetailModal';
+import MealPlanRecipeCard from '../components/MealPlanRecipeCard';
 import type { Recipe } from '../../../../domain/recipe';
 import type { MealPlan } from '../../../../system/store/mealPlanGenerationPipeline/types';
 
@@ -32,10 +34,13 @@ const RecipeDetailsValidationStage: React.FC<RecipeDetailsValidationStageProps> 
     return null;
   }
 
-  const weekCount = mealPlan.days.length / 7;
+  const weekCount = Math.ceil(mealPlan.days.length / 7);
   const totalMeals = mealPlan.days.reduce((sum, day) => sum + (day.meals?.length || 0), 0);
   const recipesWithDetails = mealPlan.days.reduce((sum, day) =>
     sum + (day.meals?.filter(m => m.detailedRecipe).length || 0), 0
+  );
+  const recipesWithImages = mealPlan.days.reduce((sum, day) =>
+    sum + (day.meals?.filter(m => m.detailedRecipe?.imageUrl).length || 0), 0
   );
 
   const handleViewRecipe = (meal: any) => {
@@ -49,6 +54,23 @@ const RecipeDetailsValidationStage: React.FC<RecipeDetailsValidationStageProps> 
     setShowRecipeDetailModal(false);
     setSelectedRecipe(null);
   };
+
+  // Collect all recipe IDs for realtime listening
+  const recipeIds = useMemo(() => {
+    if (!mealPlan) return [];
+    const ids: string[] = [];
+    mealPlan.days.forEach(day => {
+      day.meals?.forEach(meal => {
+        if (meal.detailedRecipe?.id) {
+          ids.push(meal.detailedRecipe.id);
+        }
+      });
+    });
+    return ids;
+  }, [mealPlan]);
+
+  // Listen for real-time image updates (in case some are still generating)
+  useRecipeImageRealtime(true, recipeIds);
 
   return (
     <>
@@ -79,81 +101,118 @@ const RecipeDetailsValidationStage: React.FC<RecipeDetailsValidationStageProps> 
               WebkitBackdropFilter: 'blur(24px) saturate(150%)'
             }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center"
-                  style={{
-                    background: `
-                      radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%),
-                      linear-gradient(135deg, color-mix(in srgb, #10B981 35%, transparent), color-mix(in srgb, #10B981 25%, transparent))
-                    `,
-                    border: '2px solid color-mix(in srgb, #10B981 50%, transparent)',
-                    boxShadow: '0 0 30px color-mix(in srgb, #10B981 40%, transparent)'
-                  }}
-                >
-                  <SpatialIcon Icon={ICONS.Check} size={32} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-1">
-                    Plan Alimentaire Complet !
-                  </h2>
-                  <div className="flex items-center gap-3">
-                    <p className="text-white/70">
-                      {weekCount} semaine{weekCount > 1 ? 's' : ''} · {recipesWithDetails} recettes détaillées
-                    </p>
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-400/20 border border-green-400/30">
-                      <div className="w-2 h-2 bg-green-400 rounded-full" />
-                      <span className="text-green-400 text-xs font-medium">Complet</span>
-                    </div>
+            {/* Header Section */}
+            <div className="flex items-center gap-4 mb-6">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `
+                    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%),
+                    linear-gradient(135deg, color-mix(in srgb, #10B981 35%, transparent), color-mix(in srgb, #10B981 25%, transparent))
+                  `,
+                  border: '2px solid color-mix(in srgb, #10B981 50%, transparent)',
+                  boxShadow: '0 0 30px color-mix(in srgb, #10B981 40%, transparent)'
+                }}
+              >
+                <SpatialIcon Icon={ICONS.Check} size={32} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Plan Alimentaire Complet !
+                </h2>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <p className="text-white/70">
+                    {weekCount} semaine{weekCount > 1 ? 's' : ''} · {recipesWithDetails} recettes détaillées
+                  </p>
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-400/20 border border-green-400/30">
+                    <div className="w-2 h-2 bg-green-400 rounded-full" />
+                    <span className="text-green-400 text-xs font-medium">Complet</span>
                   </div>
+                  {recipesWithImages > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400/20 border border-blue-400/30">
+                      <SpatialIcon Icon={ICONS.Image} size={12} className="text-blue-400" />
+                      <span className="text-blue-400 text-xs font-medium">{recipesWithImages} images</span>
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onDiscard}
-                  disabled={isSaving}
-                  className={`px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all duration-200 ${
-                    isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  Régénérer
-                </button>
-
+            {/* Actions Section - Stacked for better mobile UX */}
+            <div className="space-y-3">
+              {/* Primary CTA - Premium Save Button */}
+              <MotionDiv
+                className="relative w-full"
+                {...(!isPerformanceMode && {
+                  whileHover: { scale: 1.02 },
+                  transition: { duration: 0.2 }
+                })}
+              >
                 <button
                   onClick={onSaveCompletePlan}
                   disabled={isSaving}
-                  className={`px-6 py-2 text-white font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 ${
-                    isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                  className={`relative overflow-hidden w-full px-8 py-4 rounded-2xl transition-all duration-300 group ${
+                    isSaving ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
-                  style={
-                    !isSaving
-                      ? {
-                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(34, 197, 94, 0.85) 100%)',
-                          border: '2px solid color-mix(in srgb, #10B981 60%, transparent)',
-                          boxShadow: `
-                            0 8px 24px color-mix(in srgb, #10B981 40%, transparent),
-                            inset 0 2px 0 rgba(255, 255, 255, 0.3)
-                          `
-                        }
-                      : {
-                          background: 'rgba(16, 185, 129, 0.2)',
-                          border: '2px solid rgba(16, 185, 129, 0.3)'
-                        }
-                  }
+                  style={{
+                    background: isSaving
+                      ? 'rgba(16, 185, 129, 0.3)'
+                      : `
+                        linear-gradient(135deg,
+                          color-mix(in srgb, #10B981 90%, transparent),
+                          color-mix(in srgb, #22C55E 80%, transparent),
+                          color-mix(in srgb, #34D399 70%, transparent)
+                        )
+                      `,
+                    border: `3px solid ${isSaving ? 'rgba(16, 185, 129, 0.4)' : 'color-mix(in srgb, #10B981 70%, transparent)'}`,
+                    boxShadow: isSaving
+                      ? '0 8px 24px rgba(16, 185, 129, 0.2)'
+                      : `
+                        0 20px 50px color-mix(in srgb, #10B981 50%, transparent),
+                        0 0 40px color-mix(in srgb, #10B981 30%, transparent),
+                        inset 0 3px 0 rgba(255,255,255,0.4)
+                      `
+                  }}
                 >
-                  {isSaving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Sauvegarde...</span>
-                    </>
-                  ) : (
-                    <>
-                      <SpatialIcon Icon={ICONS.Save} size={18} />
-                      <span>Sauvegarder dans ma Bibliothèque</span>
-                    </>
+                  {/* Shimmer Effect */}
+                  {!isPerformanceMode && !isSaving && (
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl pointer-events-none"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)'
+                      }}
+                      animate={{ x: ['-200%', '200%'] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    />
                   )}
+
+                  <div className="flex items-center justify-center gap-3 relative z-10">
+                    {isSaving ? (
+                      <>
+                        <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span className="text-white text-lg md:text-xl font-bold">Sauvegarde en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <SpatialIcon Icon={ICONS.Save} size={24} color="white" variant="pure" />
+                        <span className="text-white text-lg md:text-xl font-bold">Sauvegarder dans ma Bibliothèque</span>
+                        <SpatialIcon Icon={ICONS.Sparkles} size={20} color="white" variant="pure" />
+                      </>
+                    )}
+                  </div>
+                </button>
+              </MotionDiv>
+
+              {/* Secondary Actions */}
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={onDiscard}
+                  disabled={isSaving}
+                  className={`px-5 py-2.5 bg-white/10 hover:bg-white/15 border border-white/25 rounded-xl text-white/90 font-medium transition-all duration-200 ${
+                    isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:border-white/40'
+                  }`}
+                >
+                  Régénérer un nouveau plan
                 </button>
               </div>
             </div>
@@ -213,63 +272,44 @@ const RecipeDetailsValidationStage: React.FC<RecipeDetailsValidationStageProps> 
                   </div>
 
                   {/* Days Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="space-y-6">
                     {weekDays.map((day, dayIndex) => (
-                      <div
-                        key={`day-${dayIndex}`}
-                        className="p-4 rounded-lg"
-                        style={{
-                          background: 'rgba(139, 92, 246, 0.05)',
-                          border: '1px solid rgba(139, 92, 246, 0.2)'
-                        }}
-                      >
-                        <div className="font-semibold text-white mb-3 text-sm">
-                          {new Date(day.date).toLocaleDateString('fr-FR', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'short'
-                          })}
+                      <div key={`day-${dayIndex}`}>
+                        {/* Day Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.2))',
+                              border: '1.5px solid rgba(139, 92, 246, 0.4)'
+                            }}
+                          >
+                            <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-violet-300" />
+                          </div>
+                          <div>
+                            <h5 className="text-white font-bold text-base">
+                              {new Date(day.date).toLocaleDateString('fr-FR', {
+                                weekday: 'long',
+                                day: 'numeric',
+                                month: 'long'
+                              })}
+                            </h5>
+                            <p className="text-white/60 text-xs">
+                              {day.meals?.length || 0} repas avec recettes complètes
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Meals List */}
-                        <div className="space-y-2">
+                        {/* Meals Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {day.meals?.map((meal, mealIndex) => (
-                            <div
+                            <MealPlanRecipeCard
                               key={`meal-${mealIndex}`}
-                              onClick={() => handleViewRecipe(meal)}
-                              className="flex items-center justify-between p-2 rounded cursor-pointer hover:bg-white/5 transition-colors"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div
-                                  className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
-                                  style={{
-                                    background: 'rgba(139, 92, 246, 0.2)',
-                                    border: '1px solid rgba(139, 92, 246, 0.3)'
-                                  }}
-                                >
-                                  <SpatialIcon
-                                    Icon={ICONS.UtensilsCrossed}
-                                    size={12}
-                                    className="text-violet-400"
-                                  />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-white/80 text-xs font-medium truncate">
-                                    {meal.name}
-                                  </p>
-                                  <p className="text-white/50 text-xs">
-                                    {meal.type}
-                                  </p>
-                                </div>
-                              </div>
-                              {meal.detailedRecipe && (
-                                <SpatialIcon
-                                  Icon={ICONS.ChevronRight}
-                                  size={14}
-                                  className="text-violet-400 flex-shrink-0"
-                                />
-                              )}
-                            </div>
+                              meal={meal}
+                              dayIndex={weekIndex * 7 + dayIndex}
+                              isGenerated={meal.recipeGenerated && meal.status === 'ready'}
+                              onClick={meal.detailedRecipe ? () => handleViewRecipe(meal) : undefined}
+                            />
                           ))}
                         </div>
                       </div>
@@ -314,7 +354,7 @@ const RecipeDetailsValidationStage: React.FC<RecipeDetailsValidationStageProps> 
             animate: { opacity: 1 },
             transition: { duration: 0.3, delay: 0.6 }
           })}
-          className="flex justify-end"
+          className="flex justify-center"
         >
           <button
             onClick={onExit}

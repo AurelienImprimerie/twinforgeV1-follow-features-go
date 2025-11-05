@@ -13,6 +13,7 @@ import ValidationStage from './stages/ValidationStage';
 import RecipeDetailsGeneratingStage from './stages/RecipeDetailsGeneratingStage';
 import RecipeDetailsValidationStage from './stages/RecipeDetailsValidationStage';
 import ResumeProgressModal from './components/ResumeProgressModal';
+import ImprovedExitConfirmationModal from '../../../ui/components/modals/ImprovedExitConfirmationModal';
 import { mealPlanProgressService } from '../../../system/services/mealPlanProgressService';
 import logger from '../../../lib/utils/logger';
 
@@ -23,6 +24,7 @@ const MealPlanGenerationPage: React.FC = () => {
   const { session } = useUserStore();
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedSessionInfo, setSavedSessionInfo] = useState<any>(null);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const {
     currentStep,
@@ -40,6 +42,7 @@ const MealPlanGenerationPage: React.FC = () => {
     generateDetailedRecipes,
     saveMealPlans,
     discardMealPlans,
+    cancelGeneration,
     resetPipeline,
     loadProgressFromDatabase,
     clearSavedProgress
@@ -53,9 +56,18 @@ const MealPlanGenerationPage: React.FC = () => {
   useEffect(() => {
     const checkSavedProgress = async () => {
       if (session?.user?.id) {
+        // Don't show modal if pipeline is already active (generation in progress)
+        if (isActive) {
+          logger.info('MEAL_PLAN_GENERATION_PAGE', 'Pipeline already active, skipping resume modal', {
+            currentStep,
+            currentSessionId
+          });
+          return;
+        }
+
         const summary = await mealPlanProgressService.getProgressSummary(session.user.id);
 
-        if (summary.hasSession && (summary.currentStep === 'validation' || summary.currentStep === 'recipe_details_validation')) {
+        if (summary.hasSession && (summary.currentStep === 'validation' || summary.currentStep === 'recipe_details_generating' || summary.currentStep === 'recipe_details_validation')) {
           setSavedSessionInfo({
             currentStep: summary.currentStep,
             sessionId: summary.sessionId,
@@ -71,7 +83,7 @@ const MealPlanGenerationPage: React.FC = () => {
     };
 
     checkSavedProgress();
-  }, [session?.user?.id, isActive, startPipeline]);
+  }, [session?.user?.id, isActive, startPipeline, currentStep, currentSessionId]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -135,11 +147,15 @@ const MealPlanGenerationPage: React.FC = () => {
       success();
       showToast({
         type: 'success',
-        title: 'Plan sauvegardé',
-        message: 'Votre plan alimentaire de base a été enregistré avec succès !',
-        duration: 3000
+        title: 'Plan sauvegardé avec succès !',
+        message: 'Votre plan est maintenant disponible dans votre bibliothèque',
+        duration: 4000,
+        action: {
+          label: 'Voir dans Plans',
+          onClick: () => navigate('/fridge#plan')
+        }
       });
-      navigate('/fridge#plans');
+      // DO NOT navigate automatically - let user stay on validation screen
     } catch (error) {
       showToast({
         type: 'error',
@@ -172,11 +188,15 @@ const MealPlanGenerationPage: React.FC = () => {
       success();
       showToast({
         type: 'success',
-        title: 'Plan complet sauvegardé',
-        message: 'Votre plan alimentaire avec toutes les recettes a été enregistré !',
+        title: 'Plan complet sauvegardé !',
+        message: 'Redirection vers votre bibliothèque de plans...',
         duration: 3000
       });
-      navigate('/fridge#plans');
+
+      // Automatic redirect to Plan tab after successful save
+      setTimeout(() => {
+        navigate('/fridge#plan');
+      }, 1500);
     } catch (error) {
       showToast({
         type: 'error',
@@ -200,6 +220,21 @@ const MealPlanGenerationPage: React.FC = () => {
   const handleResumeProgress = async () => {
     click();
     setShowResumeModal(false);
+
+    // Check if we're already on the correct session
+    if (savedSessionInfo?.sessionId === currentSessionId && isActive) {
+      logger.info('MEAL_PLAN_GENERATION_PAGE', 'Already on correct session, no need to reload', {
+        sessionId: currentSessionId,
+        currentStep
+      });
+      showToast({
+        type: 'success',
+        title: 'Génération en cours',
+        message: 'Votre génération se poursuit normalement',
+        duration: 3000
+      });
+      return;
+    }
 
     const success = await loadProgressFromDatabase();
     if (success) {
@@ -240,19 +275,105 @@ const MealPlanGenerationPage: React.FC = () => {
     click();
 
     if (mealPlanCandidates.length > 0 && currentStep !== 'configuration') {
-      const confirmed = window.confirm(
-        'Vous avez des plans non sauvegardés. Voulez-vous vraiment quitter ?'
-      );
+      setShowExitModal(true);
+    } else {
+      resetPipeline();
+      navigate('/fridge#plan');
+    }
+  };
 
-      if (!confirmed) return;
+  const handleContinueInBackground = async () => {
+    click();
+    setShowExitModal(false);
+
+    if (currentSessionId && session?.user?.id) {
+      if (currentStep === 'recipe_details_generating') {
+        await mealPlanProgressService.updateSessionStep(currentSessionId, 'recipe_details_generating');
+      } else if (currentStep === 'validation') {
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
+      } else if (currentStep === 'recipe_details_validation') {
+        await mealPlanProgressService.updateSessionStep(currentSessionId, 'recipe_details_validation');
+      }
+    }
+
+    showToast({
+      type: 'info',
+      title: 'Génération en arrière-plan',
+      message: 'Votre génération continue. Vous recevrez une notification quand elle sera terminée.',
+      duration: 4000
+    });
+
+    navigate('/fridge#plan');
+  };
+
+  const handleStopAndReturn = async () => {
+    click();
+    setShowExitModal(false);
+
+    // Cancel ongoing generation
+    showToast({
+      type: 'info',
+      title: 'Arrêt en cours...',
+      message: 'Arrêt de la génération',
+      duration: 2000
+    });
+
+    await cancelGeneration();
+
+    // Save current progress
+    if (currentSessionId) {
+      if (currentStep === 'validation') {
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
+      } else if (currentStep === 'generating' || currentStep === 'enriching') {
+        // Save whatever we have so far
+        await mealPlanProgressService.saveValidationProgress(currentSessionId, mealPlanCandidates);
+      }
+    }
+
+    showToast({
+      type: 'success',
+      title: 'Génération arrêtée',
+      message: 'Votre progression a été sauvegardée',
+      duration: 3000
+    });
+
+    navigate('/fridge#plan');
+  };
+
+  const handleDiscardAndExit = async () => {
+    click();
+    setShowExitModal(false);
+
+    // Cancel ongoing generation first
+    showToast({
+      type: 'info',
+      title: 'Arrêt en cours...',
+      message: 'Annulation de la génération',
+      duration: 2000
+    });
+
+    await cancelGeneration();
+
+    // Clear all progress
+    if (currentSessionId) {
+      await clearSavedProgress();
     }
 
     resetPipeline();
-    navigate('/fridge#plans');
+
+    showToast({
+      type: 'info',
+      title: 'Plan abandonné',
+      message: 'La génération a été annulée et supprimée',
+      duration: 3000
+    });
+
+    navigate('/fridge#plan');
   };
 
   const currentStepData = steps.find(s => s.id === currentStep) || steps[0];
   const isGenerating = loadingState === 'generating' || loadingState === 'streaming';
+  const isGeneratingRecipes = loadingState === 'generating_recipes' || loadingState === 'streaming_recipes';
   const isSaving = loadingState === 'saving';
   const currentMealPlan = mealPlanCandidates.length > 0 ? mealPlanCandidates[0] : null;
 
@@ -265,6 +386,16 @@ const MealPlanGenerationPage: React.FC = () => {
         updatedAt={savedSessionInfo?.updatedAt}
         onResume={handleResumeProgress}
         onRestart={handleRestartFromScratch}
+      />
+
+      <ImprovedExitConfirmationModal
+        isOpen={showExitModal}
+        currentStep={currentStep}
+        hasUnsavedProgress={mealPlanCandidates.length > 0}
+        onContinueInBackground={handleContinueInBackground}
+        onStopAndReturn={handleStopAndReturn}
+        onDiscardAndExit={handleDiscardAndExit}
+        onCancel={() => setShowExitModal(false)}
       />
 
       <motion.div
@@ -309,7 +440,9 @@ const MealPlanGenerationPage: React.FC = () => {
       )}
 
       {currentStep === 'recipe_details_generating' && (
-        <RecipeDetailsGeneratingStage onExit={handleExit} />
+        <RecipeDetailsGeneratingStage
+          onExit={handleExit}
+        />
       )}
 
       {currentStep === 'recipe_details_validation' && (

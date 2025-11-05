@@ -15,6 +15,7 @@ export interface PlanDataActions {
   setCurrentPlan: (plan: MealPlanData | null) => void;
   loadAllMealPlans: () => Promise<void>;
   saveCurrentMealPlan: () => Promise<void>;
+  deleteMealPlan: (planId: string) => Promise<void>;
 }
 
 export const createPlanDataActions = (
@@ -141,6 +142,7 @@ export const createPlanDataActions = (
         .from('meal_plans')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -148,15 +150,138 @@ export const createPlanDataActions = (
       }
 
       // Transform the data to match MealPlanData interface
-      const transformedPlans: MealPlanData[] = (mealPlans || []).map(plan => ({
-        id: plan.id,
-        weekNumber: 1, // Default value, could be extracted from plan_data if available
-        startDate: plan.created_at,
-        days: [], // Would need to be populated from plan_data
-        createdAt: plan.created_at,
-        updatedAt: plan.updated_at,
-        // Add other properties as needed from plan_data
-      }));
+      const transformedPlans: MealPlanData[] = (mealPlans || []).map(plan => {
+        // Extract plan_data (JSONB column containing the actual plan)
+        const planData = plan.plan_data || {};
+
+        // Transform days: convert meals array to meals object {breakfast, lunch, dinner, snack}
+        const transformedDays = (planData.days || []).map((day: any) => {
+          const mealsObject: any = {};
+
+          // If meals is already an object, use it directly
+          if (day.meals && !Array.isArray(day.meals)) {
+            return day;
+          }
+
+          // If meals is an array, convert to object keyed by type
+          if (Array.isArray(day.meals)) {
+            day.meals.forEach((meal: any) => {
+              if (meal && meal.type) {
+                mealsObject[meal.type] = {
+                  mealName: meal.name,
+                  descriptionSummary: meal.description || '',
+                  mainIngredients: meal.ingredients || [],
+                  estimatedPrepTime: meal.prepTime || 0,
+                  estimatedCookTime: meal.cookTime || 0,
+                  estimatedCalories: meal.calories || 0,
+                  dietaryTags: meal.detailedRecipe?.dietaryTags || [],
+                  status: meal.status || 'ready',
+                  isDetailedRecipeGenerated: meal.recipeGenerated || false,
+                  detailedRecipe: meal.detailedRecipe ? {
+                    id: meal.detailedRecipe.id,
+                    title: meal.detailedRecipe.title,
+                    description: meal.detailedRecipe.title,
+                    ingredients: meal.detailedRecipe.ingredients || [],
+                    instructions: meal.detailedRecipe.instructions || [],
+                    prepTimeMin: meal.detailedRecipe.prepTimeMin || 0,
+                    cookTimeMin: meal.detailedRecipe.cookTimeMin || 0,
+                    servings: meal.detailedRecipe.servings || 1,
+                    nutritionalInfo: meal.detailedRecipe.nutritionalInfo || {
+                      kcal: meal.calories || 0,
+                      protein: 0,
+                      carbs: 0,
+                      fat: 0,
+                      fiber: 0
+                    },
+                    dietaryTags: meal.detailedRecipe.dietaryTags || [],
+                    difficulty: meal.detailedRecipe.difficulty || 'moyen',
+                    tips: meal.detailedRecipe.tips || [],
+                    variations: meal.detailedRecipe.variations || [],
+                    reasonsForSelection: [],
+                    mealComponents: []
+                  } : undefined,
+                  imageUrl: meal.imageUrl || meal.detailedRecipe?.imageUrl,
+                  recipeId: meal.detailedRecipe?.id
+                };
+              }
+            });
+          }
+
+          return {
+            ...day,
+            meals: mealsObject
+          };
+        });
+
+        // Calculate nutritional summary from meals if not present
+        let nutritionalSummary = plan.nutritional_summary || planData.nutritionalSummary;
+
+        // If nutritional summary is empty or missing required fields, calculate from meals
+        if (!nutritionalSummary ||
+            typeof nutritionalSummary.avgCaloriesPerDay !== 'number' ||
+            typeof nutritionalSummary.avgProteinPerDay !== 'number') {
+
+          let totalCalories = 0;
+          let totalProtein = 0;
+          let totalCarbs = 0;
+          let totalFat = 0;
+          let dayCount = 0;
+
+          transformedDays.forEach((day: any) => {
+            if (day.meals) {
+              dayCount++;
+              Object.values(day.meals).forEach((meal: any) => {
+                if (meal) {
+                  totalCalories += meal.estimatedCalories || 0;
+                  if (meal.detailedRecipe?.nutritionalInfo) {
+                    totalProtein += meal.detailedRecipe.nutritionalInfo.protein || 0;
+                    totalCarbs += meal.detailedRecipe.nutritionalInfo.carbs || 0;
+                    totalFat += meal.detailedRecipe.nutritionalInfo.fat || 0;
+                  }
+                }
+              });
+            }
+          });
+
+          if (dayCount > 0) {
+            nutritionalSummary = {
+              avgCaloriesPerDay: Math.round(totalCalories / dayCount),
+              avgProteinPerDay: Math.round(totalProtein / dayCount),
+              avgCarbsPerDay: Math.round(totalCarbs / dayCount),
+              avgFatPerDay: Math.round(totalFat / dayCount),
+              weeklyCalories: totalCalories,
+              weeklyProtein: totalProtein,
+              weeklyCarbsGrams: totalCarbs,
+              weeklyFatGrams: totalFat
+            };
+          }
+        }
+
+        logger.info('MEAL_PLAN_STORE', 'Transforming meal plan', {
+          planId: plan.id,
+          weekNumber: plan.week_number,
+          hasPlanData: !!plan.plan_data,
+          originalDaysCount: planData.days?.length || 0,
+          transformedDaysCount: transformedDays.length,
+          hasNutritionalSummary: !!nutritionalSummary,
+          calculatedNutritionalSummary: !!(nutritionalSummary && !plan.nutritional_summary?.avgCaloriesPerDay),
+          hasAiExplanation: !!plan.ai_explanation,
+          timestamp: new Date().toISOString()
+        });
+
+        return {
+          id: plan.id,
+          weekNumber: plan.week_number || 1,
+          startDate: plan.start_date || plan.created_at,
+          days: transformedDays,
+          createdAt: plan.created_at,
+          updatedAt: plan.updated_at,
+          nutritionalSummary,
+          estimatedWeeklyCost: planData.estimatedWeeklyCost,
+          batchCookingDays: planData.batchCookingDays,
+          aiExplanation: plan.ai_explanation || planData.aiExplanation
+        };
+      });
 
       set({ allMealPlans: transformedPlans });
 
@@ -170,7 +295,7 @@ export const createPlanDataActions = (
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
-      
+
       // Set empty array on error to prevent undefined
       set({ allMealPlans: [] });
     }
@@ -229,6 +354,55 @@ export const createPlanDataActions = (
 
     } catch (error) {
       logger.error('MEAL_PLAN_STORE', 'Failed to save current meal plan', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  deleteMealPlan: async (planId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      logger.info('MEAL_PLAN_STORE', 'Deleting meal plan', {
+        planId,
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+
+      // Soft delete by setting is_archived to true
+      const { error } = await supabase
+        .from('meal_plans')
+        .update({
+          is_archived: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', planId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw new Error(`Failed to delete meal plan: ${error.message}`);
+      }
+
+      // Remove from local state
+      const { allMealPlans } = get();
+      set({
+        allMealPlans: allMealPlans.filter(plan => plan.id !== planId)
+      });
+
+      logger.info('MEAL_PLAN_STORE', 'Meal plan deleted successfully', {
+        planId,
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error('MEAL_PLAN_STORE', 'Failed to delete meal plan', {
+        planId,
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });

@@ -3,7 +3,7 @@ import logger from '../../lib/utils/logger';
 
 interface ProgressSummary {
   hasSession: boolean;
-  currentStep: 'validation' | 'recipe_details_validation' | null;
+  currentStep: 'validation' | 'recipe_details_generating' | 'recipe_details_validation' | null;
   sessionId: string | null;
   updatedAt: string | null;
 }
@@ -29,7 +29,7 @@ export class MealPlanProgressService {
 
       return {
         hasSession: true,
-        currentStep: session.current_step as 'validation' | 'recipe_details_validation',
+        currentStep: session.current_step as 'validation' | 'recipe_details_generating' | 'recipe_details_validation',
         sessionId: session.id,
         updatedAt: session.updated_at
       };
@@ -118,7 +118,7 @@ export class MealPlanProgressService {
     }
   }
 
-  async saveRecipesProgress(sessionId: string, recipes: any[]): Promise<boolean> {
+  async saveRecipesProgress(sessionId: string, recipes: any[], isGenerating: boolean = false): Promise<boolean> {
     try {
       await supabase
         .from('meal_plan_recipes_progress')
@@ -137,16 +137,17 @@ export class MealPlanProgressService {
         return false;
       }
 
+      const newStep = isGenerating ? 'recipe_details_generating' : 'recipe_details_validation';
       const { error: updateError } = await supabase
         .from('meal_plan_generation_sessions')
-        .update({ current_step: 'recipe_details_validation' })
+        .update({ current_step: newStep })
         .eq('id', sessionId);
 
       if (updateError) {
         logger.error('MEAL_PLAN_PROGRESS_SERVICE', 'Error updating session step', { error: updateError, sessionId });
       }
 
-      logger.info('MEAL_PLAN_PROGRESS_SERVICE', 'Recipes progress saved', { sessionId, recipesCount: recipes.length });
+      logger.info('MEAL_PLAN_PROGRESS_SERVICE', 'Recipes progress saved', { sessionId, recipesCount: recipes.length, step: newStep });
       return true;
     } catch (error) {
       logger.error('MEAL_PLAN_PROGRESS_SERVICE', 'Exception in saveRecipesProgress', { error, sessionId });
@@ -262,6 +263,26 @@ export class MealPlanProgressService {
       return true;
     } catch (error) {
       logger.error('MEAL_PLAN_PROGRESS_SERVICE', 'Exception in markSessionCompleted', { error, sessionId });
+      return false;
+    }
+  }
+
+  async updateSessionStep(sessionId: string, step: 'validation' | 'recipe_details_generating' | 'recipe_details_validation'): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('meal_plan_generation_sessions')
+        .update({ current_step: step })
+        .eq('id', sessionId);
+
+      if (error) {
+        logger.error('MEAL_PLAN_PROGRESS_SERVICE', 'Error updating session step', { error, sessionId, step });
+        return false;
+      }
+
+      logger.info('MEAL_PLAN_PROGRESS_SERVICE', 'Session step updated', { sessionId, step });
+      return true;
+    } catch (error) {
+      logger.error('MEAL_PLAN_PROGRESS_SERVICE', 'Exception in updateSessionStep', { error, sessionId, step });
       return false;
     }
   }

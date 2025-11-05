@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
-import { MEAL_PLAN_GENERATION_STEPS, type MealPlanGenerationStepData } from '../../../../system/store/mealPlanGenerationPipeline';
+import { MEAL_PLAN_GENERATION_STEPS, type MealPlanGenerationStepData, useMealPlanGenerationPipeline } from '../../../../system/store/mealPlanGenerationPipeline';
 import s from './MealPlanGenerationProgressHeader.module.css';
 
 interface MealPlanGenerationProgressHeaderProps {
@@ -17,7 +17,7 @@ const STEP_ICONS: Record<string, keyof typeof ICONS> = {
   generating: 'Sparkles',
   validation: 'Calendar',
   recipe_details_generating: 'ChefHat',
-  recipe_details_validation: 'Check',
+  recipe_details_validation: 'Check'
 };
 
 const MealPlanGenerationProgressHeader: React.FC<MealPlanGenerationProgressHeaderProps> = ({
@@ -25,7 +25,16 @@ const MealPlanGenerationProgressHeader: React.FC<MealPlanGenerationProgressHeade
   overallProgress,
   loadingMessage
 }) => {
+  const { receivedDaysCount, totalDaysToGenerate, processedRecipesCount, totalRecipesToGenerate, currentStep: storeCurrentStep } = useMealPlanGenerationPipeline();
   const safeProgress = Number.isFinite(overallProgress) ? Math.min(100, Math.max(0, overallProgress)) : 0;
+
+  // Show days/recipes count in subtitle when generating
+  let dynamicSubtitle = currentStep.subtitle;
+  if (storeCurrentStep === 'generating' && totalDaysToGenerate > 0 && receivedDaysCount > 0) {
+    dynamicSubtitle = `${receivedDaysCount}/${totalDaysToGenerate} jours générés`;
+  } else if (storeCurrentStep === 'recipe_details_generating' && totalRecipesToGenerate > 0 && processedRecipesCount > 0) {
+    dynamicSubtitle = `${processedRecipesCount}/${totalRecipesToGenerate} recettes générées`;
+  }
 
   const steps = MEAL_PLAN_GENERATION_STEPS.map(step => ({
     id: step.id,
@@ -56,8 +65,8 @@ const MealPlanGenerationProgressHeader: React.FC<MealPlanGenerationProgressHeade
           {/* Col 2 — Titre / Barre / Étape */}
           <div className={s.center}>
             <h2 className={s.title}>{currentStep.title || 'Forge Nutritionnelle'}</h2>
-            {currentStep.subtitle && (
-              <p className={s.subtitle}>{currentStep.subtitle}</p>
+            {dynamicSubtitle && (
+              <p className={s.subtitle}>{dynamicSubtitle}</p>
             )}
 
             <div
@@ -102,13 +111,6 @@ const MealPlanGenerationProgressHeader: React.FC<MealPlanGenerationProgressHeade
           </div>
         </div>
       </GlassCard>
-
-      {/* Loading message */}
-      {loadingMessage && (
-        <div className="mt-3 text-sm text-gray-300 animate-pulse text-center">
-          {loadingMessage}
-        </div>
-      )}
     </div>
   );
 };

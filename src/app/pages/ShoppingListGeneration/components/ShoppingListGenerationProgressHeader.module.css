@@ -1,0 +1,18 @@
+/* Shopping List Generation Progress Header Styles */
+
+.progressHeader {
+  will-change: opacity, transform;
+}
+
+.progressBar {
+  will-change: width;
+}
+
+/* Performance mode optimizations */
+.performanceMode .progressHeader {
+  animation: none !important;
+}
+
+.performanceMode .progressBar {
+  transition: width 0.3s ease-out !important;
+}

@@ -2,7 +2,6 @@ import type { StateCreator } from 'zustand';
 import type { MealPlanGenerationPipelineState, MealPlanGenerationStep } from '../types';
 import { MEAL_PLAN_GENERATION_STEPS } from '../constants';
 import logger from '../../../../lib/utils/logger';
-import { nanoid } from 'nanoid';
 
 export interface NavigationActions {
   startPipeline: () => void;
@@ -15,7 +14,7 @@ export const createNavigationActions = (
   get: StateCreator<MealPlanGenerationPipelineState>['getState']
 ): NavigationActions => ({
   startPipeline: () => {
-    const sessionId = nanoid();
+    const sessionId = crypto.randomUUID();
 
     set({
       isActive: true,
@@ -24,7 +23,12 @@ export const createNavigationActions = (
       simulatedOverallProgress: 0,
       mealPlanCandidates: [],
       loadingState: 'idle',
-      loadingMessage: ''
+      loadingMessage: '',
+      receivedDaysCount: 0,
+      totalDaysToGenerate: 0,
+      processedRecipesCount: 0,
+      totalRecipesToGenerate: 0,
+      lastStateUpdate: Date.now()
     });
 
     logger.info('MEAL_PLAN_GENERATION_PIPELINE', 'Pipeline started', {
@@ -64,6 +68,11 @@ export const createNavigationActions = (
       mealPlanCandidates: [],
       loadingState: 'idle',
       loadingMessage: '',
+      receivedDaysCount: 0,
+      totalDaysToGenerate: 0,
+      processedRecipesCount: 0,
+      totalRecipesToGenerate: 0,
+      lastStateUpdate: Date.now(),
       config: {
         selectedInventoryId: null,
         weekCount: 1,

@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom';
 import PageHeader from '../../ui/page/PageHeader';
 import Tabs from '../../ui/tabs/TabsComponent';
 import ScannerTab from './Fridge/tabs/ScannerTab';
-import FridgesTab from './Fridge/tabs/FridgesTab';
 import RecipesTab from './Fridge/tabs/RecipesTab';
 import PlanTab from './Fridge/tabs/PlanTab';
 import ShoppingListTab from './Fridge/tabs/ShoppingListTab';
@@ -26,11 +25,6 @@ const FridgePage: React.FC = () => {
         title: 'Scanner',
         subtitle: 'Scannez le contenu de votre frigo',
         iconColor: '#EC4899'
-      },
-      inventaire: {
-        title: 'Inventaire',
-        subtitle: 'Gérez vos ingrédients disponibles',
-        iconColor: '#06B6D4'
       },
       recipes: {
         title: 'Recettes',
@@ -72,9 +66,6 @@ const FridgePage: React.FC = () => {
           <Tabs.Trigger value="scanner" icon="ScanLine">
             Scanner
           </Tabs.Trigger>
-          <Tabs.Trigger value="inventaire" icon="Refrigerator">
-            Inventaire
-          </Tabs.Trigger>
           <Tabs.Trigger value="recipes" icon="ChefHat">
             Recettes
           </Tabs.Trigger>
@@ -88,10 +79,6 @@ const FridgePage: React.FC = () => {
 
         <Tabs.Panel value="scanner">
           <ScannerTab />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="inventaire">
-          <FridgesTab />
         </Tabs.Panel>
 
         <Tabs.Panel value="recipes">

@@ -3,9 +3,8 @@ import type { Recipe } from '../../../domain/recipe';
 export type MealPlanGenerationStep =
   | 'configuration'
   | 'generating'
-  | 'validation'
-  | 'recipe_details_generating'
-  | 'recipe_details_validation';
+  | 'enriching'
+  | 'validation';
 
 export interface MealPlanGenerationStepData {
   id: MealPlanGenerationStep;
@@ -37,18 +36,52 @@ export interface MealPlanDay {
   dailyMacros?: any;
 }
 
+export interface DetailedRecipe {
+  id: string;
+  title: string;
+  prepTimeMin?: number;
+  cookTimeMin?: number;
+  imageUrl?: string;
+  ingredients: Array<{
+    name: string;
+    quantity: string;
+    unit: string;
+  }>;
+  instructions: Array<{
+    step: number;
+    instruction: string;
+    timeMin?: number;
+    equipment?: string;
+  }>;
+  tips: string[];
+  variations: string[];
+  difficulty: 'facile' | 'moyen' | 'difficile';
+  servings: number;
+  nutritionalInfo: {
+    kcal: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+  };
+  dietaryTags: string[];
+  imageSignature: string;
+  status: 'loading' | 'ready';
+}
+
 export interface Meal {
   id: string;
-  mealType: string;
-  mealName: string;
-  mealDescription?: string;
-  ingredients?: any[];
-  nutritionalInfo?: any;
+  type: string;
+  name: string;
+  description?: string;
+  ingredients?: string[]; // BASE data: simple strings from meal-plan-generator
+  prepTime?: number;
+  cookTime?: number;
+  calories?: number;
   imageUrl?: string;
   imageStatus?: string;
-  recipeGenerated: boolean;
-  recipeId?: string;
-  recipe?: Recipe;
+  recipeGenerated: boolean; // false until recipe-detail-generator responds
+  detailedRecipe?: DetailedRecipe | null; // enriched data from recipe-detail-generator
   status: 'loading' | 'ready';
 }
 
@@ -69,13 +102,24 @@ export interface MealPlanGenerationPipelineState {
 
   // Progress state
   simulatedOverallProgress: number;
+  lastStateUpdate: number;
+  receivedDaysCount: number;
+  totalDaysToGenerate: number;
+  enrichedMealsCount: number; // Meals enriched by recipe-detail-generator
+  totalMealsToEnrich: number; // Total meals to enrich
+  imagesGeneratedCount: number; // Images successfully generated
+  totalImagesToGenerate: number; // Total images to generate
 
   // Data state
   mealPlanCandidates: MealPlan[];
 
   // Loading states
-  loadingState: 'idle' | 'generating' | 'streaming' | 'generating_recipes' | 'streaming_recipes';
+  loadingState: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving' | 'cancelling';
   loadingMessage: string;
+
+  // Cancellation state
+  abortController: AbortController | null;
+  isCancelling: boolean;
 
   // Steps configuration
   steps: MealPlanGenerationStepData[];
@@ -85,13 +129,15 @@ export interface MealPlanGenerationPipelineState {
   goToStep: (step: MealPlanGenerationStep) => void;
   setConfig: (config: Partial<MealPlanGenerationConfig>) => void;
   generateMealPlans: () => Promise<void>;
-  generateDetailedRecipes: () => Promise<void>;
   saveMealPlans: (withRecipes: boolean) => Promise<void>;
   discardMealPlans: () => void;
   resetPipeline: () => void;
-  setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'generating_recipes' | 'streaming_recipes' | 'saving') => void;
+  cancelGeneration: () => Promise<void>;
+  setLoadingState: (state: 'idle' | 'generating' | 'streaming' | 'enriching' | 'saving' | 'cancelling') => void;
+  updateMealWithDetailedRecipe: (planId: string, mealId: string, detailedRecipe: DetailedRecipe) => void;
   updateMealPlanStatus: (planId: string, status: 'loading' | 'ready') => void;
   updateMealStatus: (planId: string, mealId: string, status: 'loading' | 'ready', recipe?: Recipe) => void;
+  updateMealImageUrl: (recipeId: string, imageUrl: string) => void;
 
   // Progress persistence actions
   loadProgressFromDatabase: () => Promise<boolean>;

@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { usePerformanceMode } from '../../../../system/context/PerformanceModeContext';
+import { useMealPlanGenerationPipeline } from '../../../../system/store/mealPlanGenerationPipeline';
+import { useRecipeImageRealtime } from '../../../../hooks/useRecipeImageRealtime';
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
+import MealPlanRecipeCard from '../components/MealPlanRecipeCard';
 
 interface RecipeDetailsGeneratingStageProps {
   onExit: () => void;
@@ -11,7 +14,57 @@ interface RecipeDetailsGeneratingStageProps {
 
 const RecipeDetailsGeneratingStage: React.FC<RecipeDetailsGeneratingStageProps> = ({ onExit }) => {
   const { isPerformanceMode } = usePerformanceMode();
+  const { mealPlanCandidates, loadingState, loadingMessage } = useMealPlanGenerationPipeline();
   const MotionDiv = isPerformanceMode ? 'div' : motion.div;
+
+  // Calculate progress based on generated recipes
+  const currentPlan = mealPlanCandidates[0];
+  let totalMeals = 0;
+  let generatedMeals = 0;
+
+  if (currentPlan) {
+    currentPlan.days.forEach(day => {
+      day.meals?.forEach(meal => {
+        totalMeals++;
+        if (meal.recipeGenerated && meal.status === 'ready') {
+          generatedMeals++;
+        }
+      });
+    });
+  }
+
+  const progressPercentage = totalMeals > 0 ? Math.round((generatedMeals / totalMeals) * 100) : 0;
+
+  // CRITICAL FIX: Keep cards visible throughout entire stage 2 until step transition
+  // Show cards when:
+  // 1. We're enriching recipes (loadingState === 'enriching')
+  // 2. OR we have generated meals and are still streaming/generating
+  // 3. OR we have meals but images are still generating
+  const { imagesGeneratedCount, totalImagesToGenerate } = useMealPlanGenerationPipeline();
+  const imagesStillGenerating = imagesGeneratedCount < totalImagesToGenerate;
+  const isStreaming = (
+    (loadingState === 'enriching' || loadingState === 'streaming') && generatedMeals > 0
+  ) || (
+    generatedMeals > 0 && imagesStillGenerating
+  );
+
+  // Collect all recipe IDs for realtime listening
+  const recipeIds = useMemo(() => {
+    const ids: string[] = [];
+    mealPlanCandidates.forEach(plan => {
+      plan.days.forEach(day => {
+        day.meals?.forEach(meal => {
+          if (meal.detailedRecipe?.id) {
+            ids.push(meal.detailedRecipe.id);
+          }
+        });
+      });
+    });
+    return ids;
+  }, [mealPlanCandidates]);
+
+  // Listen for real-time image updates
+  useRecipeImageRealtime(isStreaming, recipeIds);
 
   return (
     <div className="space-y-6">
@@ -123,56 +176,175 @@ const RecipeDetailsGeneratingStage: React.FC<RecipeDetailsGeneratingStageProps> 
                 Génération des Recettes Détaillées
               </h2>
               <p className="text-white/80 text-lg max-w-2xl mx-auto leading-relaxed">
-                La Forge Nutritionnelle crée des recettes complètes avec instructions détaillées, temps de préparation et informations nutritionnelles...
+                {loadingMessage || 'La Forge Nutritionnelle crée des recettes complètes avec instructions détaillées, temps de préparation et informations nutritionnelles...'}
               </p>
             </div>
 
-            {/* Loading Steps */}
-            <div className="space-y-3 max-w-md mx-auto">
-              {[
-                'Analyse des repas planifiés',
-                'Création des recettes détaillées',
-                'Optimisation des instructions',
-                'Calcul des valeurs nutritionnelles'
-              ].map((step, index) => (
-                <MotionDiv
-                  key={step}
-                  className="flex items-center gap-3 p-3 rounded-lg"
-                  style={{
-                    background: 'rgba(168, 85, 247, 0.1)',
-                    border: '1px solid rgba(168, 85, 247, 0.2)'
-                  }}
-                  {...(!isPerformanceMode && {
-                    initial: { opacity: 0, x: -20 },
-                    animate: { opacity: 1, x: 0 },
-                    transition: { duration: 0.3, delay: index * 0.15 }
-                  })}
-                >
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+            {/* Progress Bar */}
+            {isStreaming && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/80">Génération des recettes en cours...</span>
+                  <span className="text-purple-400 font-semibold">{generatedMeals}/{totalMeals} recettes</span>
+                </div>
+                <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-purple-500 to-violet-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercentage}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
                     style={{
-                      background: 'linear-gradient(135deg, #A855F7, #7C3AED)',
-                      boxShadow: '0 0 12px rgba(168, 85, 247, 0.5)'
+                      boxShadow: '0 0 20px rgba(168, 85, 247, 0.6)'
                     }}
+                  />
+                </div>
+                <div className="text-center">
+                  <span className="text-purple-300 text-2xl font-bold">{progressPercentage}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Steps - Only show when not streaming */}
+            {!isStreaming && (
+              <div className="space-y-3 max-w-md mx-auto">
+                {[
+                  'Analyse des repas planifiés',
+                  'Création des recettes détaillées',
+                  'Optimisation des instructions',
+                  'Calcul des valeurs nutritionnelles'
+                ].map((step, index) => (
+                  <MotionDiv
+                    key={step}
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{
+                      background: 'rgba(168, 85, 247, 0.1)',
+                      border: '1px solid rgba(168, 85, 247, 0.2)'
+                    }}
+                    {...(!isPerformanceMode && {
+                      initial: { opacity: 0, x: -20 },
+                      animate: { opacity: 1, x: 0 },
+                      transition: { duration: 0.3, delay: index * 0.15 }
+                    })}
                   >
-                    <motion.div
-                      className="w-2 h-2 bg-white rounded-full"
-                      animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
-                      transition={{
-                        duration: 1.5,
-                        delay: index * 0.3,
-                        repeat: Infinity,
-                        ease: 'easeInOut'
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: 'linear-gradient(135deg, #A855F7, #7C3AED)',
+                        boxShadow: '0 0 12px rgba(168, 85, 247, 0.5)'
                       }}
-                    />
-                  </div>
-                  <span className="text-white/90 text-sm font-medium">{step}</span>
-                </MotionDiv>
-              ))}
-            </div>
+                    >
+                      <motion.div
+                        className="w-2 h-2 bg-white rounded-full"
+                        animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+                        transition={{
+                          duration: 1.5,
+                          delay: index * 0.3,
+                          repeat: Infinity,
+                          ease: 'easeInOut'
+                        }}
+                      />
+                    </div>
+                    <span className="text-white/90 text-sm font-medium">{step}</span>
+                  </MotionDiv>
+                ))}
+              </div>
+            )}
           </div>
         </GlassCard>
       </MotionDiv>
+
+      {/* Recipes Streaming Display - Rich Card Grid */}
+      {/* Show cards when enriching OR when we have generated meals and days */}
+      {isStreaming && currentPlan && currentPlan.days.length > 0 && (
+        <MotionDiv
+          {...(!isPerformanceMode && {
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 },
+            transition: { duration: 0.5 }
+          })}
+        >
+          <GlassCard
+            className="p-6"
+            style={{
+              background: 'rgba(11, 14, 23, 0.8)',
+              borderColor: 'rgba(168, 85, 247, 0.25)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, #A855F7, #7C3AED)',
+                    boxShadow: '0 0 20px rgba(168, 85, 247, 0.5)'
+                  }}
+                >
+                  <SpatialIcon
+                    Icon={ICONS.ChefHat}
+                    size={28}
+                    className="text-white"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-2xl mb-1">Recettes Générées</h3>
+                  <p className="text-white/70 text-sm">
+                    {generatedMeals}/{totalMeals} recettes complètes avec détails nutritionnels
+                  </p>
+                </div>
+              </div>
+
+              {/* Recipes Grid by Day */}
+              <div className="space-y-8">
+                {currentPlan.days.map((day, dayIndex) => (
+                  <div key={`day-${dayIndex}`}>
+                    {/* Day Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.2))',
+                          border: '1.5px solid rgba(168, 85, 247, 0.4)'
+                        }}
+                      >
+                        <SpatialIcon Icon={ICONS.Calendar} size={20} className="text-violet-300" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-lg">
+                          {new Date(day.date).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long'
+                          })}
+                        </h4>
+                        <p className="text-white/60 text-xs">
+                          Jour {dayIndex + 1} - {day.meals?.filter(m => m.recipeGenerated).length || 0}/{day.meals?.length || 0} repas prêts
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Meals Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {day.meals?.map((meal, mealIndex) => {
+                        const isGenerated = meal.recipeGenerated && meal.status === 'ready';
+
+                        return (
+                          <MealPlanRecipeCard
+                            key={`meal-${dayIndex}-${mealIndex}`}
+                            meal={meal}
+                            dayIndex={dayIndex}
+                            isGenerated={isGenerated}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        </MotionDiv>
+      )}
 
       {/* Exit Button */}
       <MotionDiv
@@ -181,7 +353,7 @@ const RecipeDetailsGeneratingStage: React.FC<RecipeDetailsGeneratingStageProps> 
           animate: { opacity: 1 },
           transition: { duration: 0.3, delay: 0.3 }
         })}
-        className="flex justify-end"
+        className="flex justify-center"
       >
         <button
           onClick={onExit}
