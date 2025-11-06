@@ -166,28 +166,14 @@ export interface TrainingLocation {
 
 export interface NutritionKnowledge {
   recentMeals: MealSummary[];
-  mealPlan: MealPlanSummary | null;
+  mealPlans: MealPlanKnowledge;
+  shoppingLists: ShoppingListKnowledge;
+  fridgeScans: FridgeScanKnowledge;
   scanFrequency: number;
   lastScanDate: string | null;
   averageCalories: number;
   averageProtein: number;
   dietaryPreferences: string[];
-  fridgeInventory: Array<{
-    id: string;
-    name: string;
-    category: string;
-    quantity: string;
-    scannedAt: string;
-  }>;
-  generatedRecipes: Array<{
-    id: string;
-    title: string;
-    cuisine: string;
-    cookingTime: number;
-    difficulty: string;
-    createdAt: string;
-  }>;
-  lastFridgeScanDate: string | null;
   culinaryPreferences: {
     favoriteCuisines: string[];
     cookingSkillLevel: string;
@@ -209,10 +195,142 @@ export interface MealSummary {
 
 export interface MealPlanSummary {
   id: string;
-  weekStart: string;
-  weekEnd: string;
-  isActive: boolean;
-  mealsPlanned: number;
+  sessionId: string | null;
+  title: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  status: 'draft' | 'active' | 'completed' | 'archived';
+  isArchived: boolean;
+  batchCookingEnabled: boolean;
+  aiExplanation: string | null;
+  nutritionalSummary: {
+    totalCalories?: number;
+    totalProtein?: number;
+    totalCarbs?: number;
+    totalFats?: number;
+    averageCaloriesPerDay?: number;
+  };
+  planData: any; // Full meal plan JSON structure
+  inventorySessionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MealPlanKnowledge {
+  activePlans: MealPlanSummary[];
+  recentPlans: MealPlanSummary[];
+  currentWeekPlan: MealPlanSummary | null;
+  totalPlansGenerated: number;
+  totalPlansCompleted: number;
+  lastPlanDate: string | null;
+  averageWeeklyPlans: number;
+  hasActivePlan: boolean;
+  hasData: boolean;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  itemName: string;
+  quantity: string;
+  priority: 'low' | 'medium' | 'high';
+  isChecked: boolean;
+  estimatedPriceCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShoppingListSummary {
+  id: string;
+  sessionId: string | null;
+  title: string;
+  status: 'draft' | 'active' | 'completed' | 'archived';
+  isArchived: boolean;
+  totalItems: number;
+  completedCount: number;
+  estimatedBudgetCents: number;
+  advice: string | null;
+  items: ShoppingListItem[];
+  mealPlanId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShoppingListKnowledge {
+  activeList: ShoppingListSummary | null;
+  recentLists: ShoppingListSummary[];
+  totalListsGenerated: number;
+  totalListsCompleted: number;
+  lastListDate: string | null;
+  averageItemsPerList: number;
+  averageCompletionRate: number;
+  totalBudgetSpent: number;
+  hasActiveList: boolean;
+  hasData: boolean;
+}
+
+export interface FridgeInventoryItem {
+  id: string;
+  name: string;
+  label: string;
+  category: string;
+  quantity: string;
+  estimatedQuantity?: string;
+  expirationDate?: string;
+  confidence?: number;
+}
+
+export interface FridgeScanSessionDetailed {
+  sessionId: string;
+  userId: string;
+  stage: 'photo' | 'analyze' | 'complement' | 'validation' | 'generating_recipes' | 'recipes';
+  completed: boolean;
+  capturedPhotos: Array<{
+    url: string;
+    timestamp: string;
+  }>;
+  rawDetectedItems: FridgeInventoryItem[];
+  userEditedInventory: FridgeInventoryItem[];
+  suggestedComplementaryItems: FridgeInventoryItem[];
+  recipeCandidates: Array<{
+    id: string;
+    title: string;
+    cuisine: string;
+    cookingTime: number;
+    difficulty: string;
+    ingredients: string[];
+    matchScore?: number;
+  }>;
+  selectedRecipes: string[];
+  mealPlan: any | null;
+  metadata: any;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+}
+
+export interface FridgeScanKnowledge {
+  currentSession: FridgeScanSessionDetailed | null;
+  recentSessions: FridgeScanSessionDetailed[];
+  currentInventory: FridgeInventoryItem[];
+  totalItemsInFridge: number;
+  lastScanDate: string | null;
+  totalScansCompleted: number;
+  averageItemsPerScan: number;
+  generatedRecipes: Array<{
+    id: string;
+    title: string;
+    cuisine: string;
+    cookingTime: number;
+    difficulty: string;
+    createdAt: string;
+  }>;
+  hasActiveSession: boolean;
+  hasInventory: boolean;
+  hasData: boolean;
 }
 
 export interface FastingKnowledge {

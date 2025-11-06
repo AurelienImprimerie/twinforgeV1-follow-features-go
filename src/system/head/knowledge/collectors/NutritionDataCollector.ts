@@ -5,32 +5,41 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import logger from '../../../../lib/utils/logger';
-import type { NutritionKnowledge, MealSummary, MealPlanSummary } from '../../types';
+import type { NutritionKnowledge, MealSummary } from '../../types';
+import { MealPlanDataCollector } from './MealPlanDataCollector';
+import { ShoppingListDataCollector } from './ShoppingListDataCollector';
+import { FridgeScanDataCollector } from './FridgeScanDataCollector';
 
 export class NutritionDataCollector {
   private supabase: SupabaseClient;
+  private mealPlanCollector: MealPlanDataCollector;
+  private shoppingListCollector: ShoppingListDataCollector;
+  private fridgeScanCollector: FridgeScanDataCollector;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
+    this.mealPlanCollector = new MealPlanDataCollector(supabase);
+    this.shoppingListCollector = new ShoppingListDataCollector(supabase);
+    this.fridgeScanCollector = new FridgeScanDataCollector(supabase);
   }
 
   async collect(userId: string): Promise<NutritionKnowledge> {
     try {
       logger.info('NUTRITION_DATA_COLLECTOR', 'Starting nutrition data collection', { userId });
 
-      const [mealsResult, mealPlansResult, profileResult, fridgeResult, recipesResult] = await Promise.allSettled([
+      const [mealsResult, mealPlansResult, shoppingListsResult, fridgeScansResult, profileResult] = await Promise.allSettled([
         this.collectRecentMeals(userId),
-        this.collectMealPlans(userId),
-        this.getUserProfile(userId),
-        this.collectFridgeInventory(userId),
-        this.collectGeneratedRecipes(userId)
+        this.mealPlanCollector.collect(userId),
+        this.shoppingListCollector.collect(userId),
+        this.fridgeScanCollector.collect(userId),
+        this.getUserProfile(userId)
       ]);
 
       const recentMeals = mealsResult.status === 'fulfilled' ? mealsResult.value : [];
-      const mealPlan = mealPlansResult.status === 'fulfilled' ? mealPlansResult.value : null;
+      const mealPlans = mealPlansResult.status === 'fulfilled' ? mealPlansResult.value : this.getDefaultMealPlanKnowledge();
+      const shoppingLists = shoppingListsResult.status === 'fulfilled' ? shoppingListsResult.value : this.getDefaultShoppingListKnowledge();
+      const fridgeScans = fridgeScansResult.status === 'fulfilled' ? fridgeScansResult.value : this.getDefaultFridgeScanKnowledge();
       const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
-      const fridgeInventory = fridgeResult.status === 'fulfilled' ? fridgeResult.value : [];
-      const generatedRecipes = recipesResult.status === 'fulfilled' ? recipesResult.value : [];
 
       // Calculate nutrition stats from recent meals
       const { avgCalories, avgProtein } = this.calculateNutritionStats(recentMeals);
@@ -40,16 +49,18 @@ export class NutritionDataCollector {
       const scanFrequency = recentMeals.length; // Total meals in last 30 days
 
       // Extract culinary preferences
-      const culinaryPreferences = this.extractCulinaryPreferences(profile, recentMeals, generatedRecipes);
+      const culinaryPreferences = this.extractCulinaryPreferences(profile, recentMeals, fridgeScans.generatedRecipes);
 
-      const hasData = recentMeals.length > 0 || !!mealPlan || fridgeInventory.length > 0;
+      const hasData = recentMeals.length > 0 || mealPlans.hasData || shoppingLists.hasData || fridgeScans.hasData;
 
       logger.info('NUTRITION_DATA_COLLECTOR', 'Nutrition data collected', {
         userId,
         mealsCount: recentMeals.length,
-        hasMealPlan: !!mealPlan,
-        fridgeItemsCount: fridgeInventory.length,
-        recipesCount: generatedRecipes.length,
+        mealPlansActive: mealPlans.activePlans.length,
+        shoppingListsActive: shoppingLists.hasActiveList,
+        fridgeItemsCount: fridgeScans.totalItemsInFridge,
+        fridgeScansCompleted: fridgeScans.totalScansCompleted,
+        recipesCount: fridgeScans.generatedRecipes.length,
         avgCalories,
         avgProtein,
         hasData
@@ -57,15 +68,14 @@ export class NutritionDataCollector {
 
       return {
         recentMeals,
-        mealPlan,
+        mealPlans,
+        shoppingLists,
+        fridgeScans,
         scanFrequency,
         lastScanDate,
         averageCalories: avgCalories,
         averageProtein: avgProtein,
         dietaryPreferences: profile?.dietary_preferences || [],
-        fridgeInventory,
-        generatedRecipes: generatedRecipes.slice(0, 10), // Top 10 most recent
-        lastFridgeScanDate: fridgeInventory.length > 0 ? fridgeInventory[0].scannedAt : null,
         culinaryPreferences,
         hasData
       };
@@ -114,41 +124,6 @@ export class NutritionDataCollector {
     }));
   }
 
-  /**
-   * Collect active meal plans
-   */
-  private async collectMealPlans(userId: string): Promise<MealPlanSummary | null> {
-    // Meal plans table doesn't exist yet, return null
-    return null;
-
-    /* const { data: mealPlan, error } = await this.supabase
-      .from('meal_plans')
-      .select('id, week_start_date, week_end_date, is_active')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('week_start_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !mealPlan) {
-      return null;
-    }
-
-    // Count planned meals
-    const { count } = await this.supabase
-      .from('meals')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('meal_plan_id', mealPlan.id);
-
-    return {
-      id: mealPlan.id,
-      weekStart: mealPlan.week_start_date,
-      weekEnd: mealPlan.week_end_date,
-      isActive: mealPlan.is_active,
-      mealsPlanned: count || 0
-    }; */
-  }
 
   /**
    * Get user dietary preferences from profile
@@ -163,97 +138,51 @@ export class NutritionDataCollector {
     return profile?.nutrition || {};
   }
 
-  /**
-   * Collect fridge inventory items
-   */
-  private async collectFridgeInventory(userId: string): Promise<Array<{
-    id: string;
-    name: string;
-    category: string;
-    quantity: string;
-    scannedAt: string;
-  }>> {
-    const { data: sessions, error: sessionsError } = await this.supabase
-      .from('fridge_scan_sessions')
-      .select('session_id, created_at, user_edited_inventory')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
-    if (sessionsError || !sessions || !sessions.user_edited_inventory) {
-      return [];
-    }
 
-    // Extract items from user_edited_inventory
-    const inventoryData = sessions.user_edited_inventory as any;
-    if (!Array.isArray(inventoryData)) {
-      return [];
-    }
-
-    return inventoryData
-      .filter((item: any) => item && item.name)
-      .map((item: any) => ({
-        id: item.id || `item-${Math.random()}`,
-        name: item.name || item.label || 'Inconnu',
-        category: item.category || 'autre',
-        quantity: item.quantity || item.estimatedQuantity || '1',
-        scannedAt: sessions.created_at
-      }))
-      .slice(0, 50); // Limit to 50 items
+  private getDefaultMealPlanKnowledge() {
+    return {
+      activePlans: [],
+      recentPlans: [],
+      currentWeekPlan: null,
+      totalPlansGenerated: 0,
+      totalPlansCompleted: 0,
+      lastPlanDate: null,
+      averageWeeklyPlans: 0,
+      hasActivePlan: false,
+      hasData: false
+    };
   }
 
-  /**
-   * Collect generated recipes
-   */
-  private async collectGeneratedRecipes(userId: string): Promise<Array<{
-    id: string;
-    title: string;
-    cuisine: string;
-    cookingTime: number;
-    difficulty: string;
-    createdAt: string;
-  }>> {
-    const { data: sessions, error } = await this.supabase
-      .from('fridge_scan_sessions')
-      .select('session_id, created_at, recipe_candidates')
-      .eq('user_id', userId)
-      .not('recipe_candidates', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(5);
+  private getDefaultShoppingListKnowledge() {
+    return {
+      activeList: null,
+      recentLists: [],
+      totalListsGenerated: 0,
+      totalListsCompleted: 0,
+      lastListDate: null,
+      averageItemsPerList: 0,
+      averageCompletionRate: 0,
+      totalBudgetSpent: 0,
+      hasActiveList: false,
+      hasData: false
+    };
+  }
 
-    if (error || !sessions) {
-      return [];
-    }
-
-    const allRecipes: Array<{
-      id: string;
-      title: string;
-      cuisine: string;
-      cookingTime: number;
-      difficulty: string;
-      createdAt: string;
-    }> = [];
-
-    sessions.forEach((session) => {
-      const recipeCandidates = session.recipe_candidates as any;
-      if (Array.isArray(recipeCandidates)) {
-        recipeCandidates.forEach((recipe: any) => {
-          if (recipe && recipe.title) {
-            allRecipes.push({
-              id: recipe.id || `recipe-${Math.random()}`,
-              title: recipe.title,
-              cuisine: recipe.cuisine || 'international',
-              cookingTime: recipe.cookingTime || recipe.cooking_time || 30,
-              difficulty: recipe.difficulty || 'medium',
-              createdAt: session.created_at
-            });
-          }
-        });
-      }
-    });
-
-    return allRecipes.slice(0, 20); // Top 20 most recent
+  private getDefaultFridgeScanKnowledge() {
+    return {
+      currentSession: null,
+      recentSessions: [],
+      currentInventory: [],
+      totalItemsInFridge: 0,
+      lastScanDate: null,
+      totalScansCompleted: 0,
+      averageItemsPerScan: 0,
+      generatedRecipes: [],
+      hasActiveSession: false,
+      hasInventory: false,
+      hasData: false
+    };
   }
 
   /**

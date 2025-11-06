@@ -9,9 +9,11 @@ import type { CacheEntry, ForgeType, CacheInvalidationRule } from '../types';
 const DEFAULT_TTLS: Record<ForgeType, number> = {
   training: 5 * 60 * 1000, // 5 minutes
   equipment: 30 * 60 * 1000, // 30 minutes
-  nutrition: 10 * 60 * 1000, // 10 minutes
+  nutrition: 10 * 60 * 1000, // 10 minutes (includes all culinary data)
   fasting: 10 * 60 * 1000, // 10 minutes
-  'body-scan': 60 * 60 * 1000 // 1 hour
+  'body-scan': 60 * 60 * 1000, // 1 hour
+  energy: 15 * 60 * 1000, // 15 minutes
+  temporal: 60 * 60 * 1000 // 1 hour
 };
 
 export class CacheManager {
@@ -138,7 +140,14 @@ export class CacheManager {
       },
       {
         forge: 'nutrition',
-        events: ['meals', 'meal_plans'],
+        events: [
+          'meals',
+          'meal_plans',
+          'shopping_lists',
+          'shopping_list_items',
+          'fridge_scan_sessions',
+          'recipes'
+        ],
         ttl: DEFAULT_TTLS.nutrition
       },
       {
@@ -150,6 +159,16 @@ export class CacheManager {
         forge: 'body-scan',
         events: ['body_scans'],
         ttl: DEFAULT_TTLS['body-scan']
+      },
+      {
+        forge: 'energy',
+        events: ['activity_sessions', 'wearable_data'],
+        ttl: DEFAULT_TTLS.energy
+      },
+      {
+        forge: 'temporal',
+        events: ['user_profile'],
+        ttl: DEFAULT_TTLS.temporal
       }
     ];
   }

@@ -456,15 +456,47 @@ export class UserKnowledgeBase {
   private getDefaultNutritionKnowledge(): NutritionKnowledge {
     return {
       recentMeals: [],
-      mealPlan: null,
+      mealPlans: {
+        activePlans: [],
+        recentPlans: [],
+        currentWeekPlan: null,
+        totalPlansGenerated: 0,
+        totalPlansCompleted: 0,
+        lastPlanDate: null,
+        averageWeeklyPlans: 0,
+        hasActivePlan: false,
+        hasData: false
+      },
+      shoppingLists: {
+        activeList: null,
+        recentLists: [],
+        totalListsGenerated: 0,
+        totalListsCompleted: 0,
+        lastListDate: null,
+        averageItemsPerList: 0,
+        averageCompletionRate: 0,
+        totalBudgetSpent: 0,
+        hasActiveList: false,
+        hasData: false
+      },
+      fridgeScans: {
+        currentSession: null,
+        recentSessions: [],
+        currentInventory: [],
+        totalItemsInFridge: 0,
+        lastScanDate: null,
+        totalScansCompleted: 0,
+        averageItemsPerScan: 0,
+        generatedRecipes: [],
+        hasActiveSession: false,
+        hasInventory: false,
+        hasData: false
+      },
       scanFrequency: 0,
       lastScanDate: null,
       averageCalories: 0,
       averageProtein: 0,
       dietaryPreferences: [],
-      fridgeInventory: [],
-      generatedRecipes: [],
-      lastFridgeScanDate: null,
       culinaryPreferences: {
         favoriteCuisines: [],
         cookingSkillLevel: 'intermediate',

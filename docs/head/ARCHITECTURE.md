@@ -159,10 +159,14 @@ type ForgeType = 'training' | 'nutrition' | 'fasting' | 'body-scan' | 'equipment
 - Lieu par défaut
 
 **NutritionDataCollector** (`/src/system/head/knowledge/collectors/NutritionDataCollector.ts`):
-- Repas récents et scans
+- Repas récents (30 derniers jours)
 - Macros et calories journalières
 - Patterns alimentaires
 - Objectifs nutritionnels
+- Agrège les données des 3 sous-collecteurs:
+  - **MealPlanDataCollector**: Plans de repas actifs et historique, métriques hebdomadaires
+  - **ShoppingListDataCollector**: Listes actives, items, taux de complétion, budget
+  - **FridgeScanDataCollector**: Sessions de scan, inventaire actuel, recettes générées
 
 **FastingDataCollector** (`/src/system/head/knowledge/collectors/FastingDataCollector.ts`):
 - Sessions de jeûne actives et historique
@@ -424,7 +428,7 @@ interface UserKnowledge {
   profile: ProfileKnowledge;     // Identité, objectifs
   training: TrainingKnowledge;   // Entraînements, progression
   equipment: EquipmentKnowledge; // Lieux, matériel
-  nutrition: NutritionKnowledge; // Repas, scans nutritionnels
+  nutrition: NutritionKnowledge; // Repas, plans, listes de courses, inventaire frigo
   fasting: FastingKnowledge;     // Sessions de jeûne
   bodyScan: BodyScanKnowledge;   // Scans 3D corporels
   energy: EnergyKnowledge;       // Niveau d'énergie, fatigue
@@ -544,6 +548,10 @@ BrainCore.initialize(userId)
 ├─ Create UserKnowledgeBase
 │  ├─ Create TrainingDataCollector
 │  ├─ Create EquipmentDataCollector
+│  ├─ Create NutritionDataCollector
+│  │  ├─ MealPlanDataCollector
+│  │  ├─ ShoppingListDataCollector
+│  │  └─ FridgeScanDataCollector
 │  └─ Load initial data (cached)
 ├─ Create SessionAwarenessService
 ├─ Create ContextManager
@@ -566,10 +574,15 @@ brainCore.getContext()
 ContextManager.buildContext()
     ↓
 ├─ UserKnowledgeBase.getUserKnowledge()
-│  ├─ Check cache (5-15 min TTL)
+│  ├─ Check cache (5-15 min TTL, 10 min for nutrition)
 │  ├─ If stale, collect fresh data
 │  │  ├─ TrainingDataCollector.collect()
-│  │  └─ EquipmentDataCollector.collect()
+│  │  ├─ EquipmentDataCollector.collect()
+│  │  └─ NutritionDataCollector.collect()
+│  │     ├─ Meals (last 30 days)
+│  │     ├─ MealPlanDataCollector (active/recent plans)
+│  │     ├─ ShoppingListDataCollector (active lists, items, stats)
+│  │     └─ FridgeScanDataCollector (inventory, recipes)
 │  └─ Return cached or fresh data
 ├─ SessionAwarenessService.getSessionAwareness()
 ├─ SessionAwarenessService.getAppContext()
@@ -632,11 +645,11 @@ Cache pour optimiser les performances.
 CREATE TABLE brain_context_cache (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
-  forge_type text CHECK (forge_type IN ('training', 'nutrition', 'fasting', 'body-scan', 'equipment')),
+  forge_type text CHECK (forge_type IN ('training', 'nutrition', 'fasting', 'body-scan', 'equipment', 'energy', 'temporal')),
   cache_key text NOT NULL,
   data jsonb NOT NULL,
   timestamp timestamptz DEFAULT now(),
-  ttl integer DEFAULT 300000, -- 5 minutes en ms
+  ttl integer DEFAULT 300000, -- 5 minutes en ms (10 min pour nutrition)
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -848,6 +861,17 @@ type TrainingEventType =
   | 'rpe:reported'
   | 'load:adjusted'
   | 'difficulty:adjusted';
+
+type CulinaryEventType =
+  | 'meal-plan:created'
+  | 'meal-plan:generation-completed'
+  | 'shopping-list:created'
+  | 'shopping-list:item-checked'
+  | 'shopping-list:completed'
+  | 'fridge-scan:started'
+  | 'fridge-scan:completed'
+  | 'fridge-scan:recipe-generated'
+  | 'meal:scanned';
 ```
 
 **API**:

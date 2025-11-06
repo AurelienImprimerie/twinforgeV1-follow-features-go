@@ -59,7 +59,7 @@ Le système HEAD collecte les données de plusieurs "forges" (domaines fonctionn
 
 - ✅ **Training**: Sessions, charges, progression, records
 - ✅ **Equipment**: Lieux d'entraînement, matériel disponible
-- ✅ **Nutrition**: Repas, scans, macros, calories journalières
+- ✅ **Nutrition**: Repas, scans, macros, calories journalières, plans de repas, listes de courses, inventaire frigo
 - ✅ **Fasting**: Sessions de jeûne, protocoles, progression
 - ✅ **Body-scan**: Scans corporels 3D, morphologie, composition
 - ✅ **Energy**: Niveau d'énergie, fatigue, récupération
@@ -126,6 +126,11 @@ Le système HEAD fournit aux coaches IA:
 - Équipement disponible
 - État actuel (repos vs effort)
 - Exercice en cours et progression
+- Historique nutritionnel (repas, macros, calories)
+- Plans de repas actifs et historique
+- Listes de courses (actives et complétées)
+- Inventaire du frigo et recettes générées
+- Préférences culinaires et restrictions alimentaires
 
 ### 2. Réponses Adaptatives
 
@@ -152,7 +157,8 @@ Le système réagit automatiquement aux événements:
 ### 5. Performance Optimisée
 
 - Cache intelligent avec TTL (5-15 minutes selon le forge)
-- Invalidation sélective sur changement de données
+- Nutrition cache: 10 minutes (couvre tous les domaines culinaires)
+- Invalidation sélective sur changement de données (meals, meal_plans, shopping_lists, fridge_scan_sessions)
 - Métriques de performance en temps réel
 - Health checks automatiques
 
@@ -201,12 +207,25 @@ Le voice coach utilise le HEAD pour:
 ### Système d'événements
 
 Le HEAD émet et écoute des événements:
+
+**Événements d'entraînement**:
 - `set:completed` - Série terminée
 - `exercise:completed` - Exercice terminé
 - `record:achieved` - Record battu
 - `pain:reported` - Douleur signalée
 - `rpe:reported` - RPE signalé
 - `rest:started` / `rest:ended` - Périodes de repos
+
+**Événements culinaires**:
+- `meal-plan:created` - Plan de repas créé
+- `meal-plan:generation-completed` - Génération terminée
+- `shopping-list:created` - Liste de courses créée
+- `shopping-list:item-checked` - Article coché
+- `shopping-list:completed` - Liste complétée
+- `fridge-scan:started` - Scan du frigo démarré
+- `fridge-scan:completed` - Scan terminé
+- `fridge-scan:recipe-generated` - Recette générée
+- `meal:scanned` - Repas scanné et analysé
 
 ## 🛠️ Technologies
 

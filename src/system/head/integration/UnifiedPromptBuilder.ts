@@ -189,9 +189,11 @@ export class UnifiedPromptBuilder {
       }
     }
 
-    // Nutrition
+    // Nutrition & Culinary Context
     if (user.nutrition.hasData) {
-      parts.push('\n### NUTRITION');
+      parts.push('\n### NUTRITION & CONTEXTE CULINAIRE');
+
+      // Meals
       if (user.nutrition.recentMeals.length > 0) {
         parts.push(`Repas récents: ${user.nutrition.recentMeals.length} enregistrés`);
       }
@@ -206,6 +208,97 @@ export class UnifiedPromptBuilder {
       }
       if (user.nutrition.scanFrequency > 0) {
         parts.push(`Fréquence de scan: ${user.nutrition.scanFrequency} repas/semaine`);
+      }
+
+      // Meal Plans
+      if (user.nutrition.mealPlans.hasData) {
+        parts.push('\n  📋 Plans Alimentaires:');
+        if (user.nutrition.mealPlans.hasActivePlan) {
+          parts.push(`    • Plans actifs: ${user.nutrition.mealPlans.activePlans.length}`);
+          if (user.nutrition.mealPlans.currentWeekPlan) {
+            const plan = user.nutrition.mealPlans.currentWeekPlan;
+            parts.push(`    • Plan de la semaine: "${plan.title}" (${plan.weekNumber}e semaine)`);
+            if (plan.batchCookingEnabled) {
+              parts.push(`    • Batch cooking activé`);
+            }
+            if (plan.nutritionalSummary.averageCaloriesPerDay) {
+              parts.push(`    • Cible: ${Math.round(plan.nutritionalSummary.averageCaloriesPerDay)} kcal/jour`);
+            }
+          }
+        }
+        parts.push(`    • Total générés: ${user.nutrition.mealPlans.totalPlansGenerated}`);
+        parts.push(`    • Complétés: ${user.nutrition.mealPlans.totalPlansCompleted}`);
+        if (user.nutrition.mealPlans.averageWeeklyPlans > 0) {
+          parts.push(`    • Fréquence: ${user.nutrition.mealPlans.averageWeeklyPlans.toFixed(1)} plans/semaine`);
+        }
+      }
+
+      // Shopping Lists
+      if (user.nutrition.shoppingLists.hasData) {
+        parts.push('\n  🛒 Listes de Courses:');
+        if (user.nutrition.shoppingLists.hasActiveList) {
+          const list = user.nutrition.shoppingLists.activeList!;
+          const progress = list.totalItems > 0
+            ? Math.round((list.completedCount / list.totalItems) * 100)
+            : 0;
+          parts.push(`    • Liste active: "${list.title}" (${list.completedCount}/${list.totalItems} items, ${progress}%)`);
+          if (list.estimatedBudgetCents > 0) {
+            const budget = (list.estimatedBudgetCents / 100).toFixed(2);
+            parts.push(`    • Budget estimé: ${budget}€`);
+          }
+
+          // Show critical items (high priority, not checked)
+          const criticalItems = list.items.filter(item => item.priority === 'high' && !item.isChecked);
+          if (criticalItems.length > 0) {
+            parts.push(`    • Items prioritaires restants: ${criticalItems.slice(0, 3).map(i => i.itemName).join(', ')}`);
+          }
+        }
+        parts.push(`    • Total générées: ${user.nutrition.shoppingLists.totalListsGenerated}`);
+        parts.push(`    • Complétées: ${user.nutrition.shoppingLists.totalListsCompleted}`);
+        if (user.nutrition.shoppingLists.averageCompletionRate > 0) {
+          const rate = (user.nutrition.shoppingLists.averageCompletionRate * 100).toFixed(0);
+          parts.push(`    • Taux de complétion: ${rate}%`);
+        }
+      }
+
+      // Fridge Scans & Inventory
+      if (user.nutrition.fridgeScans.hasData) {
+        parts.push('\n  🧊 Inventaire Frigo:');
+        if (user.nutrition.fridgeScans.hasInventory) {
+          parts.push(`    • Items disponibles: ${user.nutrition.fridgeScans.totalItemsInFridge}`);
+
+          // Show top items by category
+          if (user.nutrition.fridgeScans.currentInventory.length > 0) {
+            const topItems = user.nutrition.fridgeScans.currentInventory
+              .slice(0, 5)
+              .map(item => item.name)
+              .join(', ');
+            parts.push(`    • Principaux: ${topItems}`);
+          }
+        }
+
+        if (user.nutrition.fridgeScans.hasActiveSession) {
+          parts.push(`    • Scan en cours: ${user.nutrition.fridgeScans.currentSession?.stage}`);
+        }
+
+        parts.push(`    • Scans complétés: ${user.nutrition.fridgeScans.totalScansCompleted}`);
+
+        if (user.nutrition.fridgeScans.generatedRecipes.length > 0) {
+          parts.push(`    • Recettes générées: ${user.nutrition.fridgeScans.generatedRecipes.length}`);
+          const topRecipes = user.nutrition.fridgeScans.generatedRecipes
+            .slice(0, 3)
+            .map(r => r.title)
+            .join(', ');
+          parts.push(`    • Récentes: ${topRecipes}`);
+        }
+      }
+
+      // Culinary Preferences
+      if (user.nutrition.culinaryPreferences.favoriteCuisines.length > 0) {
+        parts.push('\n  👨‍🍳 Préférences Culinaires:');
+        parts.push(`    • Cuisines favorites: ${user.nutrition.culinaryPreferences.favoriteCuisines.join(', ')}`);
+        parts.push(`    • Niveau de cuisine: ${user.nutrition.culinaryPreferences.cookingSkillLevel}`);
+        parts.push(`    • Temps disponible: ${user.nutrition.culinaryPreferences.mealPrepTime.weekday}min (semaine), ${user.nutrition.culinaryPreferences.mealPrepTime.weekend}min (weekend)`);
       }
     }
 

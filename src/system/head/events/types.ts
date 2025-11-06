@@ -42,6 +42,35 @@ export type EventType =
   | 'feedback:provided'
   | 'motivation:requested'
 
+  // Culinary Events - Meal Plans
+  | 'meal-plan:created'
+  | 'meal-plan:started'
+  | 'meal-plan:completed'
+  | 'meal-plan:archived'
+  | 'meal-plan:generation-started'
+  | 'meal-plan:generation-completed'
+
+  // Culinary Events - Shopping Lists
+  | 'shopping-list:created'
+  | 'shopping-list:item-checked'
+  | 'shopping-list:item-unchecked'
+  | 'shopping-list:completed'
+  | 'shopping-list:archived'
+
+  // Culinary Events - Fridge Scans
+  | 'fridge-scan:started'
+  | 'fridge-scan:photo-captured'
+  | 'fridge-scan:analysis-completed'
+  | 'fridge-scan:inventory-edited'
+  | 'fridge-scan:recipe-generated'
+  | 'fridge-scan:completed'
+
+  // Culinary Events - Meals
+  | 'meal:scanned'
+  | 'meal:logged'
+  | 'meal:updated'
+  | 'meal:deleted'
+
   // System Events
   | 'context:refreshed'
   | 'data:synced';
@@ -167,6 +196,90 @@ export interface FeedbackProvidedEvent extends BaseEvent {
   context?: string;
 }
 
+// ============================================
+// Culinary Event Types
+// ============================================
+
+export interface MealPlanCreatedEvent extends BaseEvent {
+  type: 'meal-plan:created';
+  mealPlanId: string;
+  title: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface MealPlanCompletedEvent extends BaseEvent {
+  type: 'meal-plan:completed';
+  mealPlanId: string;
+  title: string;
+  daysCompleted: number;
+}
+
+export interface ShoppingListCreatedEvent extends BaseEvent {
+  type: 'shopping-list:created';
+  shoppingListId: string;
+  title: string;
+  totalItems: number;
+  estimatedBudgetCents: number;
+}
+
+export interface ShoppingListItemCheckedEvent extends BaseEvent {
+  type: 'shopping-list:item-checked';
+  shoppingListId: string;
+  itemId: string;
+  itemName: string;
+  completionPercentage: number;
+}
+
+export interface ShoppingListCompletedEvent extends BaseEvent {
+  type: 'shopping-list:completed';
+  shoppingListId: string;
+  title: string;
+  totalItems: number;
+  completedCount: number;
+}
+
+export interface FridgeScanStartedEvent extends BaseEvent {
+  type: 'fridge-scan:started';
+  sessionId: string;
+}
+
+export interface FridgeScanCompletedEvent extends BaseEvent {
+  type: 'fridge-scan:completed';
+  sessionId: string;
+  totalItemsDetected: number;
+  recipesGenerated: number;
+}
+
+export interface FridgeScanRecipeGeneratedEvent extends BaseEvent {
+  type: 'fridge-scan:recipe-generated';
+  sessionId: string;
+  recipeTitle: string;
+  cuisine: string;
+  matchScore?: number;
+}
+
+export interface MealScannedEvent extends BaseEvent {
+  type: 'meal:scanned';
+  mealId: string;
+  mealName: string;
+  calories: number;
+  protein: number;
+  mealType: string;
+}
+
+export type CulinaryEvent =
+  | MealPlanCreatedEvent
+  | MealPlanCompletedEvent
+  | ShoppingListCreatedEvent
+  | ShoppingListItemCheckedEvent
+  | ShoppingListCompletedEvent
+  | FridgeScanStartedEvent
+  | FridgeScanCompletedEvent
+  | FridgeScanRecipeGeneratedEvent
+  | MealScannedEvent;
+
 export type TrainingEvent =
   | SessionStartedEvent
   | SessionCompletedEvent
@@ -183,7 +296,9 @@ export type TrainingEvent =
   | QuestionAskedEvent
   | FeedbackProvidedEvent;
 
-export type EventListener<T extends TrainingEvent = TrainingEvent> = (event: T) => void | Promise<void>;
+export type HeadEvent = TrainingEvent | CulinaryEvent;
+
+export type EventListener<T extends HeadEvent = HeadEvent> = (event: T) => void | Promise<void>;
 
 export interface EventSubscription {
   unsubscribe: () => void;
