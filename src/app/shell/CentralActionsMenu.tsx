@@ -425,78 +425,67 @@ const CentralActionsMenu: React.FC<CentralActionsMenuProps> = ({ isOpen }) => {
               </div>
             )}
 
-            {/* ========== BOUTONS PRINCIPAUX: AVATAR ET TRAINING ========== */}
+            {/* ========== BOUTONS PRINCIPAUX: AVATAR ET TRAINING EN 2x2 ========== */}
             {mainActionsSection.actions.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
-                {mainActionsSection.actions.map((action, index) => {
-                  const [r, g, b] = hexToRgbArray(action.color || '#D946EF');
-                  return (
-                    <motion.button
-                      key={action.id}
-                      onClick={(e) => handleActionClick(action, true, e)}
-                      className="rounded-2xl px-4 py-3 flex items-center gap-3 w-full relative main-action-button"
-                      style={{
-                        background: `
-                          radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.12) 0%, transparent 60%),
-                          radial-gradient(circle at 70% 70%, rgba(${r}, ${g}, ${b}, 0.15) 0%, transparent 65%),
-                          rgba(255, 255, 255, 0.03)
-                        `,
-                        backdropFilter: 'blur(20px) saturate(150%)',
-                        WebkitBackdropFilter: 'blur(20px) saturate(150%)',
-                        border: `1px solid rgba(${r}, ${g}, ${b}, 0.4)`,
-                        boxShadow: `
-                          0 4px 16px rgba(${r}, ${g}, ${b}, 0.25),
-                          0 0 24px rgba(${r}, ${g}, ${b}, 0.15),
-                          inset 0 1px 0 rgba(255, 255, 255, 0.2)
-                        `
-                      }}
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0 }}
-                      role="menuitem"
-                      aria-label={action.description || action.label}
-                    >
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {mainActionsSection.actions.map((action, index) => {
+                    const [r, g, b] = hexToRgbArray(action.color || '#D946EF');
+                    return (
+                      <motion.button
+                        key={action.id}
+                        onClick={(e) => handleActionClick(action, true, e)}
+                        className="glass-card rounded-xl px-2 py-3 flex flex-col items-center gap-2 w-full main-action-button"
                         style={{
-                          background: `linear-gradient(135deg, rgba(${r}, ${g}, ${b}, 0.4), rgba(${r}, ${g}, ${b}, 0.25))`,
-                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.5)`,
-                          boxShadow: `0 0 12px rgba(${r}, ${g}, ${b}, 0.3)`
+                          background: `
+                            radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.12) 0%, transparent 60%),
+                            radial-gradient(circle at 70% 70%, rgba(${r}, ${g}, ${b}, 0.15) 0%, transparent 65%),
+                            rgba(255, 255, 255, 0.03)
+                          `,
+                          backdropFilter: 'blur(20px) saturate(150%)',
+                          WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.4)`,
+                          boxShadow: `
+                            0 4px 16px rgba(${r}, ${g}, ${b}, 0.25),
+                            0 0 24px rgba(${r}, ${g}, ${b}, 0.15),
+                            inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                          `
                         }}
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0 }}
+                        role="menuitem"
+                        aria-label={action.description || action.label}
                       >
-                        <SpatialIcon
-                          Icon={ICONS[action.icon]}
-                          size={20}
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center"
                           style={{
-                            color: action.color,
-                            filter: `drop-shadow(0 0 6px rgba(${r}, ${g}, ${b}, 0.6))`
+                            background: `linear-gradient(135deg, rgba(${r}, ${g}, ${b}, 0.4), rgba(${r}, ${g}, ${b}, 0.25))`,
+                            border: `1px solid rgba(${r}, ${g}, ${b}, 0.5)`,
+                            boxShadow: `0 0 12px rgba(${r}, ${g}, ${b}, 0.3)`
                           }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="text-[13px] font-bold text-white leading-tight">
-                          {action.label}
+                        >
+                          <SpatialIcon
+                            Icon={ICONS[action.icon]}
+                            size={22}
+                            style={{
+                              color: action.color,
+                              filter: `drop-shadow(0 0 6px rgba(${r}, ${g}, ${b}, 0.6))`
+                            }}
+                          />
                         </div>
-                        <div className="text-[10px] text-white/75 leading-tight mt-0.5">
-                          {action.subtitle}
+                        <div className="text-center">
+                          <div className="text-[11px] font-bold text-white leading-tight">
+                            {action.label}
+                          </div>
+                          <div className="text-[9px] text-white/75 leading-tight mt-0.5">
+                            {action.subtitle}
+                          </div>
                         </div>
-                      </div>
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{
-                          background: `rgba(${r}, ${g}, ${b}, 0.2)`,
-                          border: `1px solid rgba(${r}, ${g}, ${b}, 0.4)`
-                        }}
-                      >
-                        <SpatialIcon
-                          Icon={ICONS.ChevronRight}
-                          size={12}
-                          style={{ color: action.color }}
-                        />
-                      </div>
-                    </motion.button>
-                  );
-                })}
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             </div>
