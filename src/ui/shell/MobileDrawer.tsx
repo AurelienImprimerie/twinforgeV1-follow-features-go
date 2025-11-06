@@ -12,6 +12,7 @@ import logger from '../../lib/utils/logger';
 import TokenBalanceWidget from '../../app/shell/TokenBalanceWidget';
 import LogoutConfirmationModal from '../components/LogoutConfirmationModal';
 import { LogoutService } from '../../system/services/logoutService';
+import { useHideFastingForBulking } from '../../hooks';
 
 const Section = React.memo(({ title, children, type }: { title: string; children: React.ReactNode; type?: 'primary' | 'twin' | 'forge-category' }) => {
   const shouldHaveTopSpace = type === 'forge-category';
@@ -44,6 +45,7 @@ const MobileDrawer = React.memo(() => {
   const location = useLocation();
   const navRef = React.useRef<HTMLElement>(null);
   const { profile } = useUserStore();
+  const hideFastingForBulking = useHideFastingForBulking();
 
   const [expandedForges, setExpandedForges] = React.useState<Record<string, boolean>>({});
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -76,8 +78,23 @@ const MobileDrawer = React.memo(() => {
     }
   }, [drawerOpen]);
 
-  // Memoize navSections to prevent re-renders
-  const navSections = useMemo(() => navFor(), []);
+  // Memoize base navigation to prevent re-renders
+  const baseNavigation = useMemo(() => navFor(), []);
+
+  // Filter navigation to hide fasting for bulking users
+  const navSections = useMemo(() => {
+    if (!hideFastingForBulking) return baseNavigation;
+
+    return baseNavigation.map(section => {
+      if (section.title === 'Santé') {
+        return {
+          ...section,
+          items: section.items.filter(item => item.to !== '/fasting')
+        };
+      }
+      return section;
+    });
+  }, [baseNavigation, hideFastingForBulking]);
 
   // Auto-expand menu if user is on a sub-page and close others
   React.useEffect(() => {
