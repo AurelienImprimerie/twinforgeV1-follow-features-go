@@ -19,15 +19,13 @@ export interface ChatAIRequest {
 }
 
 export interface ChatAIResponse {
-  message: {
-    role: 'assistant';
-    content: string;
-  };
+  message: string; // The Edge Function returns the message content directly as a string
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
   };
+  balanceRemaining?: number;
 }
 
 class ChatAIService {
@@ -190,7 +188,7 @@ class ChatAIService {
         mode: request.mode,
         tokensUsed: data.usage?.total_tokens,
         hasMessage: !!data.message,
-        messageLength: data.message?.content?.length || 0
+        messageLength: data.message?.length || 0
       });
 
       return data;

@@ -313,14 +313,14 @@ const GlobalChatDrawer: React.FC<GlobalChatDrawerProps> = ({ chatButtonRef }) =>
       const response = await chatAIService.sendMessage(enrichedRequest);
 
       logger.info('GLOBAL_CHAT_DRAWER', '✅ Received response from AI', {
-        hasContent: !!response.message?.content,
-        contentLength: response.message?.content?.length || 0
+        hasContent: !!response.message,
+        contentLength: response.message?.length || 0
       });
 
       const assistantMessage = {
         role: 'coach' as const,
         type: 'text' as const,
-        content: response.message.content
+        content: response.message
       };
 
       addMessage(assistantMessage);
