@@ -53,6 +53,7 @@ const ShoppingListGenerationPage = lazy(() => import('./app/pages/ShoppingListGe
 
 // Dev pages
 const DevCachePage = lazy(() => import('./app/pages/DevCachePage'));
+const DevHeadDebugPage = lazy(() => import('./app/pages/DevHeadDebugPage'));
 const LogoGalleryPage = lazy(() => import('./app/pages/LogoGalleryPage'));
 
 // Forges in standby - uncomment when needed
@@ -246,6 +247,10 @@ const router = createBrowserRouter([
       {
         path: "dev/cache",
         element: <Suspense fallback={<LoadingFallback />}><DevCachePage /></Suspense>
+      },
+      {
+        path: "dev/head",
+        element: <Suspense fallback={<LoadingFallback />}><DevHeadDebugPage /></Suspense>
       },
       {
         path: "dev/logos",
