@@ -85,27 +85,31 @@ export class TemporalDataCollector {
 
     const { data: sessions, error } = await this.supabase
       .from('training_sessions')
-      .select('id, timestamp, discipline, duration_minutes, status')
+      .select('id, completed_at, started_at, discipline, duration_actual_min, status')
       .eq('user_id', userId)
-      .gte('timestamp', ninetyDaysAgo.toISOString())
-      .order('timestamp', { ascending: false });
+      .gte('completed_at', ninetyDaysAgo.toISOString())
+      .order('completed_at', { ascending: false });
 
     if (error || !sessions) {
       return [];
     }
 
     return sessions.map((session) => {
-      const date = new Date(session.timestamp);
+      // Use completed_at if available, otherwise started_at
+      const timestamp = session.completed_at || session.started_at;
+      if (!timestamp) return null;
+
+      const date = new Date(timestamp);
       return {
         id: session.id,
-        timestamp: session.timestamp,
+        timestamp: timestamp,
         discipline: session.discipline || 'unknown',
-        duration: session.duration_minutes || 0,
+        duration: session.duration_actual_min || 0,
         dayOfWeek: date.getDay(), // 0 = Sunday, 6 = Saturday
         hourOfDay: date.getHours(),
         completed: session.status === 'completed'
       };
-    });
+    }).filter((session): session is NonNullable<typeof session> => session !== null);
   }
 
   /**
@@ -114,7 +118,7 @@ export class TemporalDataCollector {
   private async getUserProfile(userId: string): Promise<any> {
     const { data: profile } = await this.supabase
       .from('user_profile')
-      .select('job_category, availability_windows, preferred_training_times')
+      .select('job_category')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -181,12 +185,8 @@ export class TemporalDataCollector {
     profile: any,
     patterns: TrainingPattern[]
   ): AvailabilityWindow[] {
-    // If profile has explicit availability windows, use them
-    if (profile?.availability_windows && Array.isArray(profile.availability_windows)) {
-      return profile.availability_windows;
-    }
-
-    // Otherwise, infer from training patterns
+    // Note: availability_windows column does not exist in user_profile yet
+    // We always infer from training patterns
     const windows: AvailabilityWindow[] = [];
 
     // Group patterns by day of week

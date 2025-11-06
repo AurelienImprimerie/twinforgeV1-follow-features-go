@@ -77,10 +77,10 @@ export class EnergyDataCollector {
       .select(`
         id,
         timestamp,
-        discipline,
-        duration_minutes,
+        type,
+        duration_min,
         distance_meters,
-        calories_burned,
+        calories_est,
         hr_avg,
         hr_max,
         hr_min,
@@ -89,10 +89,10 @@ export class EnergyDataCollector {
         vo2max_estimated,
         training_load_score,
         recovery_score,
-        fatigue_level,
+        fatigue_index,
         wearable_device_id,
-        weather_conditions,
-        perceived_effort
+        notes,
+        intensity
       `)
       .eq('user_id', userId)
       .gte('timestamp', thirtyDaysAgo.toISOString())
@@ -112,10 +112,10 @@ export class EnergyDataCollector {
     return activities.map((activity) => ({
       id: activity.id,
       timestamp: activity.timestamp,
-      discipline: activity.discipline || 'unknown',
-      duration: activity.duration_minutes || 0,
+      discipline: activity.type || 'unknown',
+      duration: activity.duration_min || 0,
       distance: activity.distance_meters || null,
-      caloriesBurned: activity.calories_burned || 0,
+      caloriesBurned: activity.calories_est || 0,
       hrAvg: activity.hr_avg || null,
       hrMax: activity.hr_max || null,
       hrMin: activity.hr_min || null,
@@ -124,10 +124,10 @@ export class EnergyDataCollector {
       vo2maxEstimated: activity.vo2max_estimated || null,
       trainingLoadScore: activity.training_load_score || null,
       recoveryScore: activity.recovery_score || null,
-      fatigueLevel: activity.fatigue_level || null,
+      fatigueLevel: activity.fatigue_index || null,
       wearableDeviceId: activity.wearable_device_id,
-      weatherConditions: activity.weather_conditions || null,
-      perceivedEffort: activity.perceived_effort || null
+      weatherConditions: null,
+      perceivedEffort: activity.intensity || null
     }));
   }
 
@@ -143,9 +143,9 @@ export class EnergyDataCollector {
   }>> {
     const { data: devices, error } = await this.supabase
       .from('connected_devices')
-      .select('id, device_type, device_name, is_active, last_sync_at')
+      .select('id, device_type, display_name, status, last_sync_at')
       .eq('user_id', userId)
-      .eq('is_active', true);
+      .eq('status', 'connected');
 
     if (error || !devices) {
       return [];
@@ -153,9 +153,9 @@ export class EnergyDataCollector {
 
     return devices.map((device) => ({
       id: device.id,
-      deviceType: device.device_type,
-      deviceName: device.device_name,
-      isActive: device.is_active,
+      deviceType: device.device_type || 'other',
+      deviceName: device.display_name || 'Unknown Device',
+      isActive: device.status === 'connected',
       lastSyncDate: device.last_sync_at
     }));
   }

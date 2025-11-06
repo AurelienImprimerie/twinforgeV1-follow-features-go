@@ -175,18 +175,18 @@ export class NutritionDataCollector {
   }>> {
     const { data: sessions, error: sessionsError } = await this.supabase
       .from('fridge_scan_sessions')
-      .select('id, created_at, inventory_data')
+      .select('session_id, created_at, user_edited_inventory')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (sessionsError || !sessions || !sessions.inventory_data) {
+    if (sessionsError || !sessions || !sessions.user_edited_inventory) {
       return [];
     }
 
-    // Extract items from inventory_data
-    const inventoryData = sessions.inventory_data as any;
+    // Extract items from user_edited_inventory
+    const inventoryData = sessions.user_edited_inventory as any;
     if (!Array.isArray(inventoryData)) {
       return [];
     }
@@ -216,7 +216,7 @@ export class NutritionDataCollector {
   }>> {
     const { data: sessions, error } = await this.supabase
       .from('fridge_scan_sessions')
-      .select('id, created_at, recipe_candidates')
+      .select('session_id, created_at, recipe_candidates')
       .eq('user_id', userId)
       .not('recipe_candidates', 'is', null)
       .order('created_at', { ascending: false })
