@@ -9,29 +9,33 @@ import type { NutritionKnowledge, MealSummary } from '../../types';
 import { MealPlanDataCollector } from './MealPlanDataCollector';
 import { ShoppingListDataCollector } from './ShoppingListDataCollector';
 import { FridgeScanDataCollector } from './FridgeScanDataCollector';
+import { AITrendAnalysesCollector } from './AITrendAnalysesCollector';
 
 export class NutritionDataCollector {
   private supabase: SupabaseClient;
   private mealPlanCollector: MealPlanDataCollector;
   private shoppingListCollector: ShoppingListDataCollector;
   private fridgeScanCollector: FridgeScanDataCollector;
+  private aiTrendAnalysesCollector: AITrendAnalysesCollector;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
     this.mealPlanCollector = new MealPlanDataCollector(supabase);
     this.shoppingListCollector = new ShoppingListDataCollector(supabase);
     this.fridgeScanCollector = new FridgeScanDataCollector(supabase);
+    this.aiTrendAnalysesCollector = new AITrendAnalysesCollector(supabase);
   }
 
   async collect(userId: string): Promise<NutritionKnowledge> {
     try {
       logger.info('NUTRITION_DATA_COLLECTOR', 'Starting nutrition data collection', { userId });
 
-      const [mealsResult, mealPlansResult, shoppingListsResult, fridgeScansResult, profileResult] = await Promise.allSettled([
+      const [mealsResult, mealPlansResult, shoppingListsResult, fridgeScansResult, aiTrendsResult, profileResult] = await Promise.allSettled([
         this.collectRecentMeals(userId),
         this.mealPlanCollector.collect(userId),
         this.shoppingListCollector.collect(userId),
         this.fridgeScanCollector.collect(userId),
+        this.aiTrendAnalysesCollector.collect(userId),
         this.getUserProfile(userId)
       ]);
 
@@ -39,6 +43,7 @@ export class NutritionDataCollector {
       const mealPlans = mealPlansResult.status === 'fulfilled' ? mealPlansResult.value : this.getDefaultMealPlanKnowledge();
       const shoppingLists = shoppingListsResult.status === 'fulfilled' ? shoppingListsResult.value : this.getDefaultShoppingListKnowledge();
       const fridgeScans = fridgeScansResult.status === 'fulfilled' ? fridgeScansResult.value : this.getDefaultFridgeScanKnowledge();
+      const aiTrends = aiTrendsResult.status === 'fulfilled' ? aiTrendsResult.value : this.getDefaultAITrendsKnowledge();
       const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
 
       // Calculate nutrition stats from recent meals
@@ -61,6 +66,8 @@ export class NutritionDataCollector {
         fridgeItemsCount: fridgeScans.totalItemsInFridge,
         fridgeScansCompleted: fridgeScans.totalScansCompleted,
         recipesCount: fridgeScans.generatedRecipes.length,
+        aiTrendsCount: aiTrends.trends.length,
+        aiAdviceCount: aiTrends.strategicAdvice.length,
         avgCalories,
         avgProtein,
         hasData
@@ -71,6 +78,7 @@ export class NutritionDataCollector {
         mealPlans,
         shoppingLists,
         fridgeScans,
+        aiTrends,
         scanFrequency,
         lastScanDate,
         averageCalories: avgCalories,
@@ -230,6 +238,17 @@ export class NutritionDataCollector {
       generatedRecipes: [],
       hasActiveSession: false,
       hasInventory: false,
+      hasData: false
+    };
+  }
+
+  private getDefaultAITrendsKnowledge() {
+    return {
+      trends: [],
+      strategicAdvice: [],
+      mealClassifications: [],
+      lastAnalysisDate: null,
+      analysisPeriod: '7_days' as const,
       hasData: false
     };
   }

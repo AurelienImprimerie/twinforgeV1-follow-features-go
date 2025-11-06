@@ -31,9 +31,23 @@ export class FridgeScanDataCollector {
         avgItems: 0
       };
 
-      // Extract current inventory from most recent completed session or current session
-      const inventorySource = currentSession?.completed === false ? currentSession : recentSessions[0];
-      const currentInventory = inventorySource?.userEditedInventory || [];
+      // Extract current inventory: priority to most recent session with inventory
+      // Check if there's a non-completed session with inventory first
+      let currentInventory: FridgeInventoryItem[] = [];
+
+      // Try to get inventory from most recent session (completed or not) with user_edited_inventory
+      const { data: sessionWithInventory } = await this.supabase
+        .from('fridge_scan_sessions')
+        .select('user_edited_inventory')
+        .eq('user_id', userId)
+        .not('user_edited_inventory', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sessionWithInventory && sessionWithInventory.user_edited_inventory) {
+        currentInventory = this.parseInventoryItems(sessionWithInventory.user_edited_inventory);
+      }
 
       // Extract all generated recipes from recent sessions
       const generatedRecipes = this.extractGeneratedRecipes(recentSessions);
@@ -76,6 +90,8 @@ export class FridgeScanDataCollector {
 
   /**
    * Collect current active session (not completed)
+   * IMPORTANT: A session with user_edited_inventory filled is NOT considered active
+   * even if completed=false, because the inventory is already available
    */
   private async collectCurrentSession(userId: string): Promise<FridgeScanSessionDetailed | null> {
     const { data: session, error } = await this.supabase
@@ -93,6 +109,22 @@ export class FridgeScanDataCollector {
     }
 
     if (!session) {
+      return null;
+    }
+
+    // Check if user_edited_inventory has content
+    const userEditedInventory = session.user_edited_inventory;
+    const hasInventoryContent = Array.isArray(userEditedInventory) && userEditedInventory.length > 0;
+
+    // If inventory is filled, this is NOT an active session anymore
+    // The user has already completed the scan and validated the inventory
+    if (hasInventoryContent) {
+      logger.info('FRIDGE_SCAN_COLLECTOR', 'Session has inventory content, not considering it as active', {
+        userId,
+        sessionId: session.session_id,
+        inventoryItems: userEditedInventory.length,
+        stage: session.stage
+      });
       return null;
     }
 

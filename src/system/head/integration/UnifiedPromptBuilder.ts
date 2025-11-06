@@ -334,8 +334,10 @@ export class UnifiedPromptBuilder {
       // Fridge Scans & Inventory
       if (user.nutrition.fridgeScans.hasData) {
         parts.push('\n  🧊 Inventaire Frigo:');
+
+        // Display inventory status correctly
         if (user.nutrition.fridgeScans.hasInventory) {
-          parts.push(`    • Items disponibles: ${user.nutrition.fridgeScans.totalItemsInFridge}`);
+          parts.push(`    • ✅ Inventaire disponible: ${user.nutrition.fridgeScans.totalItemsInFridge} items`);
 
           // Organize items by category
           if (user.nutrition.fridgeScans.currentInventory.length > 0) {
@@ -378,10 +380,11 @@ export class UnifiedPromptBuilder {
               parts.push(`    ... et ${remaining} autres items`);
             }
           }
-        }
-
-        if (user.nutrition.fridgeScans.hasActiveSession) {
-          parts.push(`    • Scan en cours: ${user.nutrition.fridgeScans.currentSession?.stage}`);
+        } else if (user.nutrition.fridgeScans.hasActiveSession) {
+          // Only show "scan en cours" if no inventory AND active session
+          parts.push(`    • 📸 Scan en cours: ${user.nutrition.fridgeScans.currentSession?.stage}`);
+        } else {
+          parts.push(`    • Aucun inventaire disponible - propose de scanner le frigo`);
         }
 
         parts.push(`    • Scans complétés: ${user.nutrition.fridgeScans.totalScansCompleted}`);
@@ -402,6 +405,54 @@ export class UnifiedPromptBuilder {
         parts.push(`    • Cuisines favorites: ${user.nutrition.culinaryPreferences.favoriteCuisines.join(', ')}`);
         parts.push(`    • Niveau de cuisine: ${user.nutrition.culinaryPreferences.cookingSkillLevel}`);
         parts.push(`    • Temps disponible: ${user.nutrition.culinaryPreferences.mealPrepTime.weekday}min (semaine), ${user.nutrition.culinaryPreferences.mealPrepTime.weekend}min (weekend)`);
+      }
+
+      // AI Trends & Analyses Nutritionnelles
+      if (user.nutrition.aiTrends && user.nutrition.aiTrends.hasData) {
+        parts.push('\n  🤖 Analyses IA & Tendances Nutritionnelles:');
+        const analysisDate = user.nutrition.aiTrends.lastAnalysisDate
+          ? new Date(user.nutrition.aiTrends.lastAnalysisDate).toLocaleDateString('fr-FR')
+          : 'N/A';
+        parts.push(`    • Dernière analyse: ${analysisDate} (période: ${user.nutrition.aiTrends.analysisPeriod === '7_days' ? '7 jours' : '30 jours'})`);
+
+        // Top 3 Trends (most important)
+        if (user.nutrition.aiTrends.trends.length > 0) {
+          parts.push('\n    📊 Tendances détectées:');
+          const topTrends = user.nutrition.aiTrends.trends.slice(0, 3);
+          topTrends.forEach((trend, idx) => {
+            const impactEmoji = trend.impact === 'positive' ? '✅' : trend.impact === 'negative' ? '⚠️' : 'ℹ️';
+            parts.push(`      ${idx + 1}. ${impactEmoji} ${trend.pattern} (confiance: ${Math.round(trend.confidence * 100)}%)`);
+            parts.push(`         ${trend.description.substring(0, 120)}${trend.description.length > 120 ? '...' : ''}`);
+            if (trend.recommendations.length > 0) {
+              parts.push(`         → ${trend.recommendations[0]}`);
+            }
+          });
+        }
+
+        // Strategic Advice (high priority only)
+        const highPriorityAdvice = user.nutrition.aiTrends.strategicAdvice.filter(a => a.priority === 'high');
+        if (highPriorityAdvice.length > 0) {
+          parts.push('\n    💡 Conseils Stratégiques Prioritaires:');
+          highPriorityAdvice.slice(0, 2).forEach((advice, idx) => {
+            const categoryEmoji = advice.category === 'nutrition' ? '🥗' :
+                                 advice.category === 'timing' ? '⏰' :
+                                 advice.category === 'balance' ? '⚖️' : '🎯';
+            const timeframeText = advice.timeframe === 'immediate' ? 'immédiat' :
+                                  advice.timeframe === 'short_term' ? 'court terme' : 'long terme';
+            parts.push(`      ${idx + 1}. ${categoryEmoji} [${timeframeText}] ${advice.advice}`);
+          });
+        }
+
+        // Meal Quality Summary
+        if (user.nutrition.aiTrends.mealClassifications.length > 0) {
+          const excellent = user.nutrition.aiTrends.mealClassifications.filter(m => m.classification === 'excellent').length;
+          const proteinRich = user.nutrition.aiTrends.mealClassifications.filter(m => m.classification === 'protein_rich').length;
+          const needsImprovement = user.nutrition.aiTrends.mealClassifications.filter(m => m.classification === 'needs_improvement').length;
+          const total = user.nutrition.aiTrends.mealClassifications.length;
+
+          parts.push('\n    🍽️ Qualité des Repas:');
+          parts.push(`      • Excellents: ${excellent}/${total} | Riches en protéines: ${proteinRich}/${total} | À améliorer: ${needsImprovement}/${total}`);
+        }
       }
     }
 

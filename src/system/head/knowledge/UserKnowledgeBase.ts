@@ -327,7 +327,29 @@ export class UserKnowledgeBase {
     }
 
     // Store raw profile for adapters (important for ProfileKnowledgeAdapter)
-    this.rawProfile = profile;
+    // Clean up unnecessary avatar/portrait fields to reduce head system bloat
+    const cleanedProfile = { ...profile };
+
+    // Remove avatar/portrait bloat fields
+    delete cleanedProfile.avatar_generation_status;
+    delete cleanedProfile.avatar_creation_progress;
+    delete cleanedProfile.avatar_generation_stage;
+    delete cleanedProfile.avatar_onboarding_complete;
+    delete cleanedProfile.avatar_generation_concept_day;
+    delete cleanedProfile.avatar_status; // Remove - keeping only avatar_url
+    delete cleanedProfile.portrait_source;
+    delete cleanedProfile.portrait_url; // Duplicate of avatar_url
+    delete cleanedProfile.facial_keypoints;
+    delete cleanedProfile.color_palette;
+    delete cleanedProfile.skin_tone;
+    delete cleanedProfile.skin_tone_v2_migrated;
+    delete cleanedProfile.migrate;
+    delete cleanedProfile.hip_mass;
+    delete cleanedProfile.shoulder_mass;
+    delete cleanedProfile.active_face_profile;
+    // Keep avatar_url and arms_hold as requested
+
+    this.rawProfile = cleanedProfile;
 
     return {
       // Core Identity

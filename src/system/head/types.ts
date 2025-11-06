@@ -176,11 +176,37 @@ export interface TrainingLocation {
   equipment: string[];
 }
 
+export interface AITrendAnalysesKnowledge {
+  trends: Array<{
+    pattern: string;
+    description: string;
+    impact: 'positive' | 'negative' | 'neutral';
+    confidence: number;
+    recommendations: string[];
+  }>;
+  strategicAdvice: Array<{
+    category: 'nutrition' | 'timing' | 'balance' | 'goals';
+    advice: string;
+    priority: 'low' | 'medium' | 'high';
+    timeframe: 'immediate' | 'short_term' | 'long_term';
+  }>;
+  mealClassifications: Array<{
+    meal_id: string;
+    classification: 'balanced' | 'protein_rich' | 'needs_improvement' | 'excellent';
+    reasoning: string;
+    score: number;
+  }>;
+  lastAnalysisDate: string | null;
+  analysisPeriod: '7_days' | '30_days';
+  hasData: boolean;
+}
+
 export interface NutritionKnowledge {
   recentMeals: MealSummary[];
   mealPlans: MealPlanKnowledge;
   shoppingLists: ShoppingListKnowledge;
   fridgeScans: FridgeScanKnowledge;
+  aiTrends: AITrendAnalysesKnowledge;
   scanFrequency: number;
   lastScanDate: string | null;
   averageCalories: number;
