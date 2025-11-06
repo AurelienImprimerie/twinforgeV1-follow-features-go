@@ -569,6 +569,13 @@ async function streamRecipesFromOpenAI(prompt: string, userId: string, cacheKey:
           analysis_type: 'recipe_generation',
           status: 'completed',
           input_hash: cacheKey,
+          model_used: 'gpt-5-mini',
+          tokens_used: {
+            input: totalTokens.input,
+            output: totalTokens.output,
+            total: totalTokens.input + totalTokens.output,
+            cost_estimate_usd: costUsd
+          },
           request_payload: {
             inventory_count: inventory.length,
             has_preferences: !!preferences,

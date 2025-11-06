@@ -656,6 +656,13 @@ Exemple de format attendu:
       analysis_type: 'fridge_vision',
       status: 'completed',
       input_hash: cacheKey,
+      model_used: 'gpt-5-mini',
+      tokens_used: {
+        input: inputTokens,
+        output: outputTokens,
+        total: inputTokens + outputTokens,
+        cost_estimate_usd: costUsd
+      },
       request_payload: {
         image_count: imagesToProcess.length,
         model_used: 'gpt-5-mini',

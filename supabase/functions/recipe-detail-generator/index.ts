@@ -374,6 +374,13 @@ await consumeTokensAtomic(supabase, {
         user_id: request.user_id,
         analysis_type: 'recipe_detail_generation',
         status: 'completed',
+        model_used: 'gpt-5-mini',
+        tokens_used: {
+          input: tokenUsage.input,
+          output: tokenUsage.output,
+          total: tokenUsage.input + tokenUsage.output,
+          cost_estimate_usd: tokenUsage.costUsd
+        },
         request_payload: request,
         result_payload: recipe,
         input_hash: cacheKey

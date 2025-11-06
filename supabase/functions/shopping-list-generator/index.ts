@@ -348,6 +348,13 @@ IMPORTANT: Ton JSON doit etre parsable par JSON.parse() sans erreur.`
         .from('ai_analysis_jobs')
         .update({
           status: 'completed',
+          model_used: 'gpt-5-mini',
+          tokens_used: {
+            input: tokenUsage.input,
+            output: tokenUsage.output,
+            total: tokenUsage.input + tokenUsage.output,
+            cost_estimate_usd: tokenUsage.costUsd
+          },
           result_payload: parsedResponse,
           updated_at: new Date().toISOString()
         })

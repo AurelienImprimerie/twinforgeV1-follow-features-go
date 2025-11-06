@@ -168,11 +168,14 @@ async function getCachedInsights(supabase: any, userId: string, inputHash: strin
  * Store insights in cache
  */
 async function storeInsightsCache(
-  supabase: any, 
-  userId: string, 
-  inputHash: string, 
+  supabase: any,
+  userId: string,
+  inputHash: string,
   insights: FastingInsightsResponse,
-  tokensUsed: number
+  tokensUsed: number,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number
 ): Promise<void> {
   try {
     const { error } = await supabase
@@ -182,6 +185,13 @@ async function storeInsightsCache(
         analysis_type: 'fasting_insights',
         status: 'completed',
         input_hash: inputHash,
+        model_used: 'gpt-5-mini',
+        tokens_used: {
+          input: inputTokens,
+          output: outputTokens,
+          total: tokensUsed,
+          cost_estimate_usd: costUsd
+        },
         request_payload: {
           periodDays: insights.periodDays,
           timestamp: new Date().toISOString()
@@ -297,7 +307,7 @@ async function generateFastingInsights(
   periodDays: number,
   userId: string,
   supabase: any
-): Promise<{ insights: FastingInsightsResponse; tokensUsed: number }> {
+): Promise<{ insights: FastingInsightsResponse; tokensUsed: number; inputTokens: number; outputTokens: number; costUsd: number }> {
   let prompt = buildFastingInsightsPrompt(profile, sessions, periodDays);
 
   // Add reproductive health context if available
@@ -359,14 +369,16 @@ async function generateFastingInsights(
     throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
   
-  const tokensUsed = data.usage?.total_tokens || 0;
+  const inputTokens = data.usage?.prompt_tokens || 0;
+  const outputTokens = data.usage?.completion_tokens || 0;
+  const tokensUsed = data.usage?.total_tokens || (inputTokens + outputTokens);
 
   // Validate and structure the response
   const insights: FastingInsightsResponse = {
     summary: aiResponse.summary,
     insights: aiResponse.insights,
-    dataQuality: sessions.length >= 15 ? 'excellent' : 
-                sessions.length >= 8 ? 'good' : 
+    dataQuality: sessions.length >= 15 ? 'excellent' :
+                sessions.length >= 8 ? 'good' :
                 sessions.length >= 3 ? 'limited' : 'insufficient',
     analysisDate: new Date().toISOString(),
     periodDays,
@@ -375,7 +387,9 @@ async function generateFastingInsights(
     cached: false
   };
 
-  return { insights, tokensUsed };
+  const costUsd = (inputTokens * 0.25 / 1000000) + (outputTokens * 2.00 / 1000000);
+
+  return { insights, tokensUsed, inputTokens, outputTokens, costUsd };
 }
 
 Deno.serve(async (req: Request) => {
@@ -520,7 +534,7 @@ Deno.serve(async (req: Request) => {
       completedSessions: completedSessions.length
     });
 
-    const { insights, tokensUsed } = await generateFastingInsights(profile, fastingSessions, periodDays, userId, supabase);
+    const { insights, tokensUsed, inputTokens, outputTokens, costUsd } = await generateFastingInsights(profile, fastingSessions, periodDays, userId, supabase);
 
     // Calculate cost
     const estimatedCostUSD = calculateCostFromTokens(tokensUsed);
@@ -550,7 +564,7 @@ await consumeTokensAtomic(supabase, {
     });
 
     // Store in cache
-    await storeInsightsCache(supabase, userId, inputHash, insights, tokensUsed);
+    await storeInsightsCache(supabase, userId, inputHash, insights, tokensUsed, inputTokens, outputTokens, costUsd);
 
     console.log('FASTING_INSIGHTS_GENERATOR', 'AI insights generated successfully', {
       userId,
