@@ -112,21 +112,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, apikey",
 };
 
-/**
- * Calculate token usage and cost estimation for GPT-5 models
- */
 function calculateGPT5TokenCost(inputTokens: number, outputTokens: number, model: string): {
   input: number;
   output: number;
   total: number;
   cost_estimate_usd: number;
 } {
-  // GPT-5 pricing (per million tokens)
   const pricing = {
     'gpt-5': { input: 1.25, output: 10.00 },
     'gpt-5-mini': { input: 0.25, output: 2.00 },
     'gpt-5-nano': { input: 0.05, output: 0.40 },
-    // Fallback to GPT-4o pricing if model not found
     'gpt-4o': { input: 2.50, output: 10.00 },
   };
   
@@ -140,18 +135,14 @@ function calculateGPT5TokenCost(inputTokens: number, outputTokens: number, model
     input: inputTokens,
     output: outputTokens,
     total: inputTokens + outputTokens,
-    cost_estimate_usd: Math.round(totalCost * 1000000) / 1000000 // Round to 6 decimal places
+    cost_estimate_usd: Math.round(totalCost * 1000000) / 1000000
   };
 }
 
-/**
- * Create optimized prompt for nutrition trend analysis
- */
-function createTrendAnalysisPrompt(meals: any[], userProfile: any, period: string): string {
+async function createTrendAnalysisPrompt(meals: any[], userProfile: any, period: string, userId: string): Promise<string> {
   const totalCalories = meals.reduce((sum, meal) => sum + (meal.total_kcal || 0), 0);
   const avgDailyCalories = Math.round(totalCalories / 7);
   
-  // Calculate macros
   const totalMacros = meals.reduce((acc, meal) => {
     const items = meal.items || [];
     items.forEach((item: any) => {
@@ -166,22 +157,8 @@ function createTrendAnalysisPrompt(meals: any[], userProfile: any, period: strin
   const avgCarbs = Math.round(totalMacros.carbs / 7);
   const avgFats = Math.round(totalMacros.fats / 7);
 
-  let prompt = `Analysez ces données nutritionnelles sur ${period === '7_days' ? '7 jours' : '30 jours'} et identifiez des patterns et tendances.
+  let prompt = `Analysez ces données nutritionnelles sur ${period === '7_days' ? '7 jours' : '30 jours'} et identifiez des patterns et tendances.\n\nDONNÉES NUTRITIONNELLES (${meals.length} repas):\n- Calories moyennes/jour: ${avgDailyCalories} kcal\n- Protéines moyennes/jour: ${avgProteins}g\n- Glucides moyennes/jour: ${avgCarbs}g\n- Lipides moyennes/jour: ${avgFats}g\n\nHISTORIQUE DÉTAILLÉ:\n${meals.map((meal, index) => `\n${index + 1}. ${meal.meal_type} - ${meal.total_kcal} kcal (${new Date(meal.timestamp).toLocaleDateString('fr-FR')})\n   Aliments: ${meal.items?.map((item: any) => `${item.name} (${item.calories}kcal)`).join(', ') || 'Non spécifié'}\n   Macros: P:${meal.items?.reduce((sum: number, item: any) => sum + (item.proteins || 0), 0)}g, G:${meal.items?.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0)}g, L:${meal.items?.reduce((sum: number, item: any) => sum + (item.fats || 0), 0)}g\n`).join('')}`;
 
-DONNÉES NUTRITIONNELLES (${meals.length} repas):
-- Calories moyennes/jour: ${avgDailyCalories} kcal
-- Protéines moyennes/jour: ${avgProteins}g
-- Glucides moyennes/jour: ${avgCarbs}g
-- Lipides moyennes/jour: ${avgFats}g
-
-HISTORIQUE DÉTAILLÉ:
-${meals.map((meal, index) => `
-${index + 1}. ${meal.meal_type} - ${meal.total_kcal} kcal (${new Date(meal.timestamp).toLocaleDateString('fr-FR')})
-   Aliments: ${meal.items?.map((item: any) => `${item.name} (${item.calories}kcal)`).join(', ') || 'Non spécifié'}
-   Macros: P:${meal.items?.reduce((sum: number, item: any) => sum + (item.proteins || 0), 0)}g, G:${meal.items?.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0)}g, L:${meal.items?.reduce((sum: number, item: any) => sum + (item.fats || 0), 0)}g
-`).join('')}`;
-
-  // Add user context for personalization
   if (userProfile) {
     prompt += `\n\nCONTEXTE UTILISATEUR:`;
 
@@ -215,73 +192,29 @@ ${index + 1}. ${meal.meal_type} - ${meal.total_kcal} kcal (${new Date(meal.times
     }
   }
 
-  // Add reproductive health context if available
   try {
-    const reproductiveContext = await getReproductiveHealthContext(
-      createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!),
-      requestBody.user_id
+    const reproductiveContextData = await getReproductiveHealthContext(
+      userId,
+      createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     );
 
-    if (reproductiveContext) {
-      prompt += `\n\n${reproductiveContext}`;
+    if (reproductiveContextData.hasData && reproductiveContextData.formattedContext) {
+      prompt += `\n\n${reproductiveContextData.formattedContext}`;
     }
   } catch (error) {
     console.warn('NUTRITION_TREND_ANALYSIS', 'Failed to fetch reproductive health context', { error });
   }
 
-  prompt += `\n\nGénérez un objet JSON avec cette structure exacte (TOUT en français):
-{
-  "trends": [
-    {
-      "pattern": "nom_du_pattern_identifié",
-      "description": "description_détaillée_du_pattern_max_150_mots",
-      "impact": "positive|negative|neutral",
-      "confidence": 0.0-1.0,
-      "recommendations": ["action_1", "action_2"]
-    }
-  ],
-  "strategic_advice": [
-    {
-      "category": "nutrition|timing|balance|goals",
-      "advice": "conseil_stratégique_actionnable_max_100_mots",
-      "priority": "low|medium|high",
-      "timeframe": "immediate|short_term|long_term"
-    }
-  ],
-  "meal_classifications": [
-    {
-      "meal_id": "id_du_repas",
-      "classification": "balanced|protein_rich|needs_improvement|excellent",
-      "reasoning": "justification_de_la_classification",
-      "score": score_sur_100
-    }
-  ],
-  "diet_compliance": {
-    "overall_score": score_sur_100,
-    "compliance_rate": 0.0-1.0,
-    "deviations": ["écart_1_si_applicable"],
-    "suggestions": ["suggestion_1", "suggestion_2"]
-  }
-}
-
-INSTRUCTIONS:
-- Identifiez des patterns réels dans les données
-- Proposez des conseils personnalisés et actionnables
-- Soyez spécifique aux objectifs et contraintes de l'utilisateur
-- Classifiez chaque repas avec une justification claire
-- Évaluez la conformité au régime déclaré
-- RÉPONDEZ UNIQUEMENT EN FRANÇAIS`;
+  prompt += `\n\nGénérez un objet JSON avec cette structure exacte (TOUT en français):\n{\n  "trends": [\n    {\n      "pattern": "nom_du_pattern_identifié",\n      "description": "description_détaillée_du_pattern_max_150_mots",\n      "impact": "positive|negative|neutral",\n      "confidence": 0.0-1.0,\n      "recommendations": ["action_1", "action_2"]\n    }\n  ],\n  "strategic_advice": [\n    {\n      "category": "nutrition|timing|balance|goals",\n      "advice": "conseil_stratégique_actionnable_max_100_mots",\n      "priority": "low|medium|high",\n      "timeframe": "immediate|short_term|long_term"\n    }\n  ],\n  "meal_classifications": [\n    {\n      "meal_id": "id_du_repas",\n      "classification": "balanced|protein_rich|needs_improvement|excellent",\n      "reasoning": "justification_de_la_classification",\n      "score": score_sur_100\n    }\n  ],\n  "diet_compliance": {\n    "overall_score": score_sur_100,\n    "compliance_rate": 0.0-1.0,\n    "deviations": ["écart_1_si_applicable"],\n    "suggestions": ["suggestion_1", "suggestion_2"]\n  }\n}\n\nINSTRUCTIONS:\n- Identifiez des patterns réels dans les données\n- Proposez des conseils personnalisés et actionnables\n- Soyez spécifique aux objectifs et contraintes de l'utilisateur\n- Classifiez chaque repas avec une justification claire\n- Évaluez la conformité au régime déclaré\n- RÉPONDEZ UNIQUEMENT EN FRANÇAIS`;
 
   return prompt;
 }
 
-/**
- * Call OpenAI API for trend analysis
- */
 async function callOpenAIForTrendAnalysis(
-  meals: any[], 
-  userProfile: any, 
+  meals: any[],
+  userProfile: any,
   period: string,
+  userId: string,
   model: string = 'gpt-5-mini'
 ): Promise<{
   result: Partial<TrendAnalysisResponse>;
@@ -290,7 +223,6 @@ async function callOpenAIForTrendAnalysis(
 }> {
   const startTime = Date.now();
   
-  // Get OpenAI API key from environment
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
     throw new Error('OpenAI API key not found in environment variables');
@@ -305,8 +237,7 @@ async function callOpenAIForTrendAnalysis(
     timestamp: new Date().toISOString()
   });
   
-  // Create optimized prompt
-  const prompt = createTrendAnalysisPrompt(meals, userProfile, period);
+  const prompt = await createTrendAnalysisPrompt(meals, userProfile, period, userId);
   
   console.log('TREND_ANALYSIS_AI', 'Generated prompt for trend analysis', {
     model,
@@ -315,7 +246,6 @@ async function callOpenAIForTrendAnalysis(
     timestamp: new Date().toISOString()
   });
   
-  // Prepare OpenAI API request
   const requestBody = {
     model: model,
     messages: [
@@ -333,7 +263,6 @@ async function callOpenAIForTrendAnalysis(
   };
   
   try {
-    // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -368,13 +297,11 @@ async function callOpenAIForTrendAnalysis(
       timestamp: new Date().toISOString()
     });
     
-    // Parse the JSON response
     const aiContent = openaiResponse.choices[0]?.message?.content;
     if (!aiContent) {
       throw new Error('No content in OpenAI response');
     }
     
-    // Enhanced debugging for empty or invalid content
     if (aiContent.trim() === '') {
       console.error('TREND_ANALYSIS_AI', 'OpenAI returned empty content despite successful response', {
         model,
@@ -390,7 +317,6 @@ async function callOpenAIForTrendAnalysis(
       throw new Error('OpenAI returned empty content - possible token limit or content filtering issue');
     }
     
-    // Check if response was truncated due to token limit
     if (openaiResponse.choices[0]?.finish_reason === 'length') {
       console.warn('TREND_ANALYSIS_AI', 'OpenAI response was truncated due to token limit', {
         model,
@@ -401,7 +327,6 @@ async function callOpenAIForTrendAnalysis(
         timestamp: new Date().toISOString()
       });
       
-      // Try to salvage partial JSON if possible
       if (!aiContent.includes('}')) {
         throw new Error('Response truncated and incomplete JSON - increase max_completion_tokens further');
       }
@@ -426,7 +351,6 @@ async function callOpenAIForTrendAnalysis(
         timestamp: new Date().toISOString()
       });
     } catch (parseError) {
-      // Enhanced debugging for parsing failures
       console.error('TREND_ANALYSIS_AI', 'Failed to parse OpenAI JSON response', {
         model,
         parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
@@ -442,7 +366,6 @@ async function callOpenAIForTrendAnalysis(
       throw new Error(`Failed to parse OpenAI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
     
-    // Calculate token usage and cost
     const tokenUsage = calculateGPT5TokenCost(
       openaiResponse.usage.prompt_tokens,
       openaiResponse.usage.completion_tokens,
@@ -458,7 +381,6 @@ async function callOpenAIForTrendAnalysis(
       timestamp: new Date().toISOString()
     });
     
-    // Transform OpenAI response to our expected format
     const result: Partial<TrendAnalysisResponse> = {
       trends: Array.isArray(parsedAnalysis.trends) ? parsedAnalysis.trends.map((trend: any) => ({
         pattern: trend.pattern || 'Pattern non identifié',
@@ -525,13 +447,11 @@ async function callOpenAIForTrendAnalysis(
   }
 }
 
-/**
- * Call OpenAI API with retry logic and fallback
- */
 async function callOpenAIWithRetry(
-  meals: any[], 
-  userProfile: any, 
+  meals: any[],
+  userProfile: any,
   period: string,
+  userId: string,
   maxRetries: number = 2
 ): Promise<{
   result: Partial<TrendAnalysisResponse>;
@@ -542,7 +462,6 @@ async function callOpenAIWithRetry(
 }> {
   let lastError: Error | null = null;
   
-  // Try GPT-5 models in order of preference (cost-effectiveness)
   const modelsToTry = ['gpt-5-mini', 'gpt-5-nano'];
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -557,7 +476,7 @@ async function callOpenAIWithRetry(
         timestamp: new Date().toISOString()
       });
       
-      const analysisResult = await callOpenAIForTrendAnalysis(meals, userProfile, period, modelToUse);
+      const analysisResult = await callOpenAIForTrendAnalysis(meals, userProfile, period, userId, modelToUse);
       
       console.log('TREND_ANALYSIS_RETRY', 'OpenAI trend analysis successful', {
         attempt: attempt + 1,
@@ -585,17 +504,14 @@ async function callOpenAIWithRetry(
         timestamp: new Date().toISOString()
       });
       
-      // If this was the last attempt, break to use fallback
       if (attempt === maxRetries) {
         break;
       }
       
-      // Wait before retry (exponential backoff)
       await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
     }
   }
   
-  // All OpenAI attempts failed, use intelligent fallback
   console.error('TREND_ANALYSIS_RETRY', 'All OpenAI trend analysis attempts failed, using intelligent fallback', {
     lastError: lastError?.message || 'Unknown error',
     attemptsCount: maxRetries + 1,
@@ -614,9 +530,6 @@ async function callOpenAIWithRetry(
   };
 }
 
-/**
- * Intelligent fallback for trend analysis when OpenAI fails
- */
 function generateIntelligentTrendFallback(meals: any[], userProfile: any): Partial<TrendAnalysisResponse> {
   console.log('TREND_ANALYSIS_FALLBACK', 'Generating intelligent trend fallback', {
     mealsCount: meals.length,
@@ -627,7 +540,6 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
   const totalCalories = meals.reduce((sum, meal) => sum + (meal.total_kcal || 0), 0);
   const avgDailyCalories = Math.round(totalCalories / 7);
   
-  // Calculate macros
   const totalMacros = meals.reduce((acc, meal) => {
     const items = meal.items || [];
     items.forEach((item: any) => {
@@ -644,7 +556,6 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
   const strategic_advice = [];
   const meal_classifications = [];
   
-  // Protein trend analysis
   const proteinTarget = userProfile?.nutrition?.proteinTarget_g || (userProfile?.weight_kg ? userProfile.weight_kg * 1.6 : 120);
   if (avgProteins < proteinTarget * 0.8) {
     trends.push({
@@ -674,7 +585,6 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
     });
   }
   
-  // Calorie consistency analysis
   const calorieVariation = meals.map(meal => meal.total_kcal || 0);
   const maxCalories = Math.max(...calorieVariation);
   const minCalories = Math.min(...calorieVariation.filter(cal => cal > 0));
@@ -693,7 +603,6 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
     });
   }
   
-  // Classify meals using intelligent logic
   meals.forEach(meal => {
     const mealMacros = meal.items?.reduce((acc: any, item: any) => {
       acc.proteins += item.proteins || 0;
@@ -735,7 +644,6 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
     });
   });
   
-  // Diet compliance analysis
   const diet = userProfile?.nutrition?.diet || '';
   let dietCompliance = {
     overall_score: 85,
@@ -770,17 +678,13 @@ function generateIntelligentTrendFallback(meals: any[], userProfile: any): Parti
   };
 }
 
-/**
- * Check cache for existing trend analysis
- */
 async function checkTrendAnalysisCache(
   supabase: any,
   userId: string,
   period: string
 ): Promise<TrendAnalysisResponse | null> {
   try {
-    // Check if we have a cached analysis for this period
-    const cacheValidHours = period === '7_days' ? 24 : 168; // 24h for weekly, 7 days for monthly
+    const cacheValidHours = period === '7_days' ? 24 : 168;
     const cacheThreshold = new Date(Date.now() - cacheValidHours * 60 * 60 * 1000);
     
     const { data, error } = await supabase
@@ -840,9 +744,6 @@ async function checkTrendAnalysisCache(
   }
 }
 
-/**
- * Save trend analysis to cache
- */
 async function saveTrendAnalysisToCache(
   supabase: any,
   userId: string,
@@ -891,7 +792,6 @@ async function saveTrendAnalysisToCache(
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -900,7 +800,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Only allow POST requests
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ 
@@ -914,10 +813,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Parse request body
     const requestBody: TrendAnalysisRequest = await req.json();
     
-    // Validate required fields
     if (!requestBody.user_id) {
       return new Response(
         JSON.stringify({ 
@@ -954,12 +851,10 @@ Deno.serve(async (req: Request) => {
       timestamp: new Date().toISOString()
     });
 
-    // Initialize Supabase client for caching
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // TOKEN PRE-CHECK
     const estimatedTokens = 45;
     const tokenCheck = await checkTokenBalance(supabase, requestBody.user_id, estimatedTokens);
 
@@ -978,7 +873,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check cache first
     const cachedAnalysis = await checkTrendAnalysisCache(
       supabase,
       requestBody.user_id,
@@ -1002,26 +896,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Generate new AI trend analysis
     const { result: analysisResult, tokenUsage, aiModel, fallbackUsed, fallbackReason } =
       await callOpenAIWithRetry(
         requestBody.meals,
         requestBody.user_profile,
-        requestBody.analysis_period
+        requestBody.analysis_period,
+        requestBody.user_id
       );
 
-    // TOKEN CONSUMPTION - Only if not fallback
     if (!fallbackUsed && tokenUsage.total > 0) {
-      const costUsd = (tokenUsage.prompt_tokens / 1000000 * 0.25) + (tokenUsage.completion_tokens / 1000000 * 2.0);
+      const costUsd = (tokenUsage.input / 1000000 * 0.25) + (tokenUsage.output / 1000000 * 2.0);
 
       const requestId = crypto.randomUUID();
-await consumeTokensAtomic(supabase, {
+      await consumeTokensAtomic(supabase, {
         userId: requestBody.user_id,
         edgeFunctionName: 'nutrition-trend-analysis',
         operationType: 'nutrition_trend_analysis',
         openaiModel: 'gpt-5-mini',
-        openaiInputTokens: tokenUsage.prompt_tokens,
-        openaiOutputTokens: tokenUsage.completion_tokens,
+        openaiInputTokens: tokenUsage.input,
+        openaiOutputTokens: tokenUsage.output,
         openaiCostUsd: costUsd,
         metadata: {
           analysisPeriod: requestBody.analysis_period,
@@ -1037,7 +930,6 @@ await consumeTokensAtomic(supabase, {
       });
     }
 
-    // Prepare response
     const response: TrendAnalysisResponse = {
       success: true,
       trends: analysisResult.trends || [],
@@ -1056,7 +948,6 @@ await consumeTokensAtomic(supabase, {
       tokens_consumed: estimatedTokens
     };
 
-    // Save to cache for future requests (only if not fallback)
     if (!fallbackUsed) {
       await saveTrendAnalysisToCache(
         supabase,
@@ -1080,7 +971,6 @@ await consumeTokensAtomic(supabase, {
       timestamp: new Date().toISOString()
     });
 
-    // Log cost tracking for monitoring
     if (tokenUsage.total > 0) {
       console.log('AI_COST_TRACKING', 'OpenAI trend analysis token usage logged', {
         userId: requestBody.user_id,
@@ -1109,14 +999,13 @@ await consumeTokensAtomic(supabase, {
       timestamp: new Date().toISOString()
     });
 
-    // Return intelligent fallback even on critical failure
     const fallbackResult = generateIntelligentTrendFallback(
       requestBody?.meals || [],
       requestBody?.user_profile
     );
     
     const response: TrendAnalysisResponse = {
-      success: true, // Still return success with fallback
+      success: true,
       trends: fallbackResult.trends || [],
       strategic_advice: fallbackResult.strategic_advice || [],
       meal_classifications: fallbackResult.meal_classifications || [],
@@ -1134,7 +1023,7 @@ await consumeTokensAtomic(supabase, {
     return new Response(
       JSON.stringify(response),
       {
-        status: 200, // Return 200 with fallback data instead of 500
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
