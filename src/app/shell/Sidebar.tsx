@@ -283,7 +283,8 @@ const Sidebar = React.memo(({ className = '' }: { className?: string }) => {
   const [activeForge, setActiveForge] = useState<string | null>(null);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const navigation = navFor();
+  // Mémoriser la navigation de base pour éviter les recalculs inutiles
+  const navigation = React.useMemo(() => navFor(), []);
 
   // Filtrer la navigation pour masquer la Forge du Temps si prise de masse
   const filteredNavigation = React.useMemo(() => {
@@ -320,7 +321,18 @@ const Sidebar = React.memo(({ className = '' }: { className?: string }) => {
     let newActiveForge: string | null = null;
     const newExpandedState: Record<string, boolean> = {};
 
-    filteredNavigation.forEach(section => {
+    // Recalculer filteredNavigation dans l'effet pour éviter la dépendance circulaire
+    const navToUse = navigation.map(section => {
+      if (section.title === 'Santé' && hideFastingForBulking) {
+        return {
+          ...section,
+          items: section.items.filter(item => item.to !== '/fasting')
+        };
+      }
+      return section;
+    });
+
+    navToUse.forEach(section => {
       section.items.forEach(item => {
         if (item.subItems && item.subItems.length > 0) {
           const hasActiveSubItem = item.subItems.some(subItem => {
@@ -343,7 +355,7 @@ const Sidebar = React.memo(({ className = '' }: { className?: string }) => {
     // Update states
     setExpandedForges(newExpandedState);
     setActiveForge(newActiveForge);
-  }, [location.pathname, filteredNavigation]);
+  }, [location.pathname, hideFastingForBulking, navigation]);
 
   // Log sidebar render
   React.useEffect(() => {
