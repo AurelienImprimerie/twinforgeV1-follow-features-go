@@ -39,7 +39,7 @@ export interface RecipeGenerationPipelineState {
   steps: RecipeGenerationStepData[];
 
   // Actions
-  startPipeline: () => void;
+  startPipeline: () => Promise<void>;
   goToStep: (step: RecipeGenerationStep) => void;
   setConfig: (config: Partial<RecipeGenerationConfig>) => void;
   generateRecipes: () => Promise<void>;

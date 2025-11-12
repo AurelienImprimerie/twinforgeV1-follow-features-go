@@ -22,25 +22,26 @@ export const createRecipeActions = (
         throw new Error('User must be authenticated to save recipes');
       }
 
-      // Get or create recipe_session
-      let sessionId = state.currentSessionId;
+      const sessionId = state.currentSessionId;
 
       if (!sessionId) {
-        // Create new session
-        const { data: newSession, error: sessionError } = await supabase
-          .from('recipe_sessions')
-          .insert({
-            user_id: user.id,
-            inventory_final: []
-          })
-          .select('id')
-          .single();
+        throw new Error('No active session found. Please restart recipe generation.');
+      }
 
-        if (sessionError || !newSession) {
-          throw new Error('Failed to create recipe session');
-        }
+      // Verify session exists in database
+      const { data: existingSession, error: sessionCheckError } = await supabase
+        .from('recipe_sessions')
+        .select('id')
+        .eq('id', sessionId)
+        .single();
 
-        sessionId = newSession.id;
+      if (sessionCheckError || !existingSession) {
+        logger.error('RECIPE_GENERATION_PIPELINE', 'Session not found in database', {
+          sessionId,
+          error: sessionCheckError?.message,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error('Recipe session not found. Please restart recipe generation.');
       }
 
       // Save recipes to database
@@ -63,20 +64,49 @@ export const createRecipeActions = (
           reasons: recipe.reasons
         }));
 
+      if (recipesToSave.length === 0) {
+        throw new Error('No recipes ready to save');
+      }
+
       const { error: recipesError } = await supabase
         .from('recipes')
         .insert(recipesToSave);
 
       if (recipesError) {
+        logger.error('RECIPE_GENERATION_PIPELINE', 'Failed to insert recipes', {
+          sessionId,
+          error: recipesError.message,
+          code: recipesError.code,
+          details: recipesError.details,
+          timestamp: new Date().toISOString()
+        });
+
+        // Update session status to error
+        await supabase
+          .from('recipe_sessions')
+          .update({ status: 'error' })
+          .eq('id', sessionId);
+
         throw recipesError;
       }
 
-      // Update session with selected recipe IDs
+      // Update session with completion status and selected recipe IDs
       const recipeIds = state.recipeCandidates.map(r => r.id);
-      await supabase
+      const { error: updateError } = await supabase
         .from('recipe_sessions')
-        .update({ selected_recipe_ids: recipeIds })
+        .update({
+          selected_recipe_ids: recipeIds,
+          status: 'completed'
+        })
         .eq('id', sessionId);
+
+      if (updateError) {
+        logger.warn('RECIPE_GENERATION_PIPELINE', 'Failed to update session status', {
+          sessionId,
+          error: updateError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       logger.info('RECIPE_GENERATION_PIPELINE', 'Recipes saved successfully', {
         sessionId,

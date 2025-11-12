@@ -46,7 +46,19 @@ const RecipeGenerationPage: React.FC = () => {
   // Initialize pipeline on mount
   useEffect(() => {
     if (!isActive) {
-      startPipeline();
+      startPipeline().catch(error => {
+        logger.error('RECIPE_GENERATION_PAGE', 'Failed to initialize pipeline', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        });
+
+        showToast({
+          type: 'error',
+          title: 'Erreur d\'initialisation',
+          message: 'Impossible de démarrer la génération de recettes',
+          duration: 5000
+        });
+      });
     }
   }, []);
 

@@ -350,12 +350,31 @@ export const createGenerationActions = (
               costUsd: parsedData.cost_usd
             });
 
-            // Award XP for recipe generation
+            // Award XP for recipe generation using Supabase RPC
             (async () => {
               try {
-                const { useForgeXpRewards } = await import('../../../../hooks/useForgeXpRewards');
-                const { awardForgeXpSilently } = useForgeXpRewards();
-                await awardForgeXpSilently('recipe_generated');
+                const { supabase } = await import('../../../supabase/client');
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (user) {
+                  // Call the Supabase RPC function to award XP
+                  const { error: xpError } = await supabase.rpc('award_forge_xp', {
+                    p_user_id: user.id,
+                    p_action: 'recipe_generated',
+                    p_source: 'recipe_generation'
+                  });
+
+                  if (xpError) {
+                    logger.warn('RECIPE_GENERATION_PIPELINE', 'Failed to award XP for recipe', {
+                      error: xpError.message
+                    });
+                  } else {
+                    logger.info('RECIPE_GENERATION_PIPELINE', 'XP awarded for recipe generation', {
+                      userId: user.id,
+                      timestamp: new Date().toISOString()
+                    });
+                  }
+                }
               } catch (error) {
                 logger.warn('RECIPE_GENERATION_PIPELINE', 'Failed to award XP for recipe', {
                   error: error instanceof Error ? error.message : 'Unknown error'
