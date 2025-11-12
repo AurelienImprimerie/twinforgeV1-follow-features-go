@@ -26,10 +26,10 @@ export interface GuideSection {
 }
 
 export interface GuideContent {
-  page: 'dashboard' | 'profile' | 'settings' | 'fasting' | 'activity';
+  page: 'dashboard' | 'profile' | 'settings' | 'fasting' | 'activity' | 'nutrition' | 'fridge';
   title: string;
   description: string;
   sections: GuideSection[];
 }
 
-export type GuidePage = 'dashboard' | 'profile' | 'settings' | 'fasting' | 'activity';
+export type GuidePage = 'dashboard' | 'profile' | 'settings' | 'fasting' | 'activity' | 'nutrition' | 'fridge';
