@@ -140,6 +140,32 @@ export const GAMING_COLORS = {
       iconBackground: 'color-mix(in srgb, #8B5CF6 20%, transparent)',
       iconBorder: 'color-mix(in srgb, #8B5CF6 45%, transparent)',
     }
+  },
+
+  // Couleurs gaming universelles (dégradé jaune/orange pour tous les pipelines)
+  UNIVERSAL_GAMING: {
+    primary: '#F59E0B',      // Orange vif (amber)
+    secondary: '#FBBF24',    // Jaune
+    accent: '#D97706',       // Orange foncé
+    glow: 'rgba(245, 158, 11, 0.4)',
+    gradient: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 50%, #D97706 100%)',
+    badge: {
+      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)',
+      border: 'color-mix(in srgb, #F59E0B 40%, transparent)',
+      text: '#FBBF24',
+    },
+    hint: {
+      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(245, 158, 11, 0.12) 100%)',
+      border: 'color-mix(in srgb, #F59E0B 25%, transparent)',
+      iconBackground: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)',
+      iconBorder: 'color-mix(in srgb, #F59E0B 30%, transparent)',
+    },
+    success: {
+      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.15) 100%)',
+      border: 'color-mix(in srgb, #F59E0B 35%, transparent)',
+      iconBackground: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)',
+      iconBorder: 'color-mix(in srgb, #F59E0B 45%, transparent)',
+    }
   }
 } as const;
 

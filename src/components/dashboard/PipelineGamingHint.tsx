@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { usePerformanceMode } from '../../system/context/PerformanceModeContext';
 import SpatialIcon from '../../ui/icons/SpatialIcon';
 import { ICONS } from '../../ui/icons/registry';
-import { getForgeColor } from './gamingColors';
+import { GAMING_COLORS } from './gamingColors';
 
 interface PipelineGamingHintProps {
   points: number;
@@ -15,6 +15,7 @@ interface PipelineGamingHintProps {
 /**
  * PipelineGamingHint - Petit indicateur gaming pour les étapes 1 des pipelines
  * Affiche un message informatif avec les points gagnables
+ * Utilise le thème gaming universel (dégradé jaune/orange)
  */
 const PipelineGamingHint: React.FC<PipelineGamingHintProps> = ({
   points,
@@ -23,19 +24,19 @@ const PipelineGamingHint: React.FC<PipelineGamingHintProps> = ({
   className = ''
 }) => {
   const { isPerformanceMode } = usePerformanceMode();
-  const forgeColor = getForgeColor(forgeName);
+  const gamingColors = GAMING_COLORS.UNIVERSAL_GAMING;
   const MotionDiv = isPerformanceMode ? 'div' : motion.div;
 
   return (
     <MotionDiv
       className={`inline-flex items-center gap-3 px-4 py-3 rounded-xl ${className}`}
       style={{
-        background: forgeColor.hint.background,
-        border: `1px solid ${forgeColor.hint.border}`,
+        background: gamingColors.hint.background,
+        border: `1px solid ${gamingColors.hint.border}`,
         backdropFilter: isPerformanceMode ? 'none' : 'blur(12px) saturate(120%)',
         boxShadow: isPerformanceMode
           ? 'none'
-          : `0 4px 16px ${forgeColor.glow}20`
+          : `0 4px 16px ${gamingColors.glow}20`
       }}
       {...(!isPerformanceMode && {
         initial: { opacity: 0, y: 10 },
@@ -46,16 +47,16 @@ const PipelineGamingHint: React.FC<PipelineGamingHintProps> = ({
       <div
         className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
         style={{
-          background: forgeColor.hint.iconBackground,
-          border: `1px solid ${forgeColor.hint.iconBorder}`
+          background: gamingColors.hint.iconBackground,
+          border: `1px solid ${gamingColors.hint.iconBorder}`
         }}
       >
         <SpatialIcon
           Icon={ICONS.Trophy}
           size={20}
           style={{
-            color: forgeColor.primary,
-            filter: isPerformanceMode ? 'none' : `drop-shadow(0 0 6px ${forgeColor.glow})`
+            color: gamingColors.secondary,
+            filter: isPerformanceMode ? 'none' : `drop-shadow(0 0 6px ${gamingColors.glow})`
           }}
         />
       </div>
@@ -67,9 +68,9 @@ const PipelineGamingHint: React.FC<PipelineGamingHintProps> = ({
       <div
         className="flex-shrink-0 px-3 py-1.5 rounded-full font-bold text-sm"
         style={{
-          background: forgeColor.badge.background,
-          border: `1px solid ${forgeColor.badge.border}`,
-          color: forgeColor.badge.text
+          background: gamingColors.badge.background,
+          border: `1px solid ${gamingColors.badge.border}`,
+          color: gamingColors.badge.text
         }}
       >
         +{points} pts

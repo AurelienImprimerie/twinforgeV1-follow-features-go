@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { usePerformanceMode } from '../../system/context/PerformanceModeContext';
 import SpatialIcon from '../../ui/icons/SpatialIcon';
 import { ICONS } from '../../ui/icons/registry';
-import { getForgeColor } from './gamingColors';
+import { GAMING_COLORS } from './gamingColors';
 
 interface GamingSuccessBannerProps {
   points: number;
@@ -16,6 +16,7 @@ interface GamingSuccessBannerProps {
 /**
  * GamingSuccessBanner - Bannière de succès gaming pour les étapes finales
  * Affiche une célébration avec animation pulse pour les points gagnés
+ * Utilise le thème gaming universel (dégradé jaune/orange)
  */
 const GamingSuccessBanner: React.FC<GamingSuccessBannerProps> = ({
   points,
@@ -25,19 +26,19 @@ const GamingSuccessBanner: React.FC<GamingSuccessBannerProps> = ({
   className = ''
 }) => {
   const { isPerformanceMode } = usePerformanceMode();
-  const forgeColor = getForgeColor(forgeName);
+  const gamingColors = GAMING_COLORS.UNIVERSAL_GAMING;
   const MotionDiv = isPerformanceMode ? 'div' : motion.div;
 
   return (
     <MotionDiv
       className={`relative overflow-hidden rounded-2xl ${className}`}
       style={{
-        background: forgeColor.success.background,
-        border: `2px solid ${forgeColor.success.border}`,
+        background: gamingColors.success.background,
+        border: `2px solid ${gamingColors.success.border}`,
         backdropFilter: isPerformanceMode ? 'none' : 'blur(20px) saturate(140%)',
         boxShadow: isPerformanceMode
           ? 'none'
-          : `0 8px 32px ${forgeColor.glow}30, inset 0 1px 0 rgba(255, 255, 255, 0.1)`
+          : `0 8px 32px ${gamingColors.glow}30, inset 0 1px 0 rgba(255, 255, 255, 0.1)`
       }}
       {...(!isPerformanceMode && {
         initial: { opacity: 0, scale: 0.95 },
@@ -64,19 +65,19 @@ const GamingSuccessBanner: React.FC<GamingSuccessBannerProps> = ({
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{
-              background: forgeColor.success.iconBackground,
-              border: `2px solid ${forgeColor.success.iconBorder}`,
+              background: gamingColors.success.iconBackground,
+              border: `2px solid ${gamingColors.success.iconBorder}`,
               boxShadow: isPerformanceMode
                 ? 'none'
-                : `0 0 30px ${forgeColor.glow}40, inset 0 1px 0 rgba(255, 255, 255, 0.2)`
+                : `0 0 30px ${gamingColors.glow}40, inset 0 1px 0 rgba(255, 255, 255, 0.2)`
             }}
           >
             <SpatialIcon
               Icon={ICONS.Trophy}
               size={32}
               style={{
-                color: forgeColor.primary,
-                filter: isPerformanceMode ? 'none' : `drop-shadow(0 0 10px ${forgeColor.glow})`
+                color: gamingColors.secondary,
+                filter: isPerformanceMode ? 'none' : `drop-shadow(0 0 10px ${gamingColors.glow})`
               }}
             />
           </div>
@@ -105,12 +106,12 @@ const GamingSuccessBanner: React.FC<GamingSuccessBannerProps> = ({
           <div
             className="px-6 py-3 rounded-2xl font-bold text-lg"
             style={{
-              background: forgeColor.badge.background,
-              border: `2px solid ${forgeColor.badge.border}`,
-              color: forgeColor.badge.text,
+              background: gamingColors.badge.background,
+              border: `2px solid ${gamingColors.badge.border}`,
+              color: gamingColors.badge.text,
               boxShadow: isPerformanceMode
                 ? 'none'
-                : `0 0 25px ${forgeColor.glow}, 0 4px 16px rgba(0, 0, 0, 0.3)`
+                : `0 0 25px ${gamingColors.glow}, 0 4px 16px rgba(0, 0, 0, 0.3)`
             }}
           >
             +{points} pts
