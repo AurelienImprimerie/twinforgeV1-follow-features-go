@@ -25,8 +25,37 @@ export const createRecipeActions = (
       // Get or create recipe_session
       let sessionId = state.currentSessionId;
 
-      if (!sessionId) {
-        // Create new session
+      if (sessionId) {
+        // Check if session exists in database
+        const { data: existingSession } = await supabase
+          .from('recipe_sessions')
+          .select('id')
+          .eq('id', sessionId)
+          .maybeSingle();
+
+        if (!existingSession) {
+          // Session doesn't exist in DB, create it
+          const { data: newSession, error: sessionError } = await supabase
+            .from('recipe_sessions')
+            .insert({
+              id: sessionId,
+              user_id: user.id,
+              inventory_final: []
+            })
+            .select('id')
+            .single();
+
+          if (sessionError || !newSession) {
+            logger.error('RECIPE_GENERATION_PIPELINE', 'Failed to create recipe session', {
+              error: sessionError?.message,
+              sessionId,
+              timestamp: new Date().toISOString()
+            });
+            throw new Error('Failed to create recipe session');
+          }
+        }
+      } else {
+        // Create new session without predefined ID
         const { data: newSession, error: sessionError } = await supabase
           .from('recipe_sessions')
           .insert({
