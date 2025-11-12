@@ -4,6 +4,7 @@ import { usePerformanceMode } from '../../../../system/context/PerformanceModeCo
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
+import PipelineGamingHint from '../../../../components/dashboard/PipelineGamingHint';
 
 interface CaptureMainCTAProps {
   onCameraCapture: () => void;
@@ -172,6 +173,15 @@ const CaptureMainCTA: React.FC<CaptureMainCTAProps> = ({
               Forge Spatiale Prête
             </span>
           </div>
+        </div>
+
+        {/* Gaming Hint */}
+        <div className="flex justify-center mt-4">
+          <PipelineGamingHint
+            points={30}
+            forgeName="Forge Culinaire"
+            message="Scannez votre frigo pour gagner des points"
+          />
         </div>
       </div>
 

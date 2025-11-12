@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import GlassCard from '../../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../../ui/icons/registry';
+import PipelineGamingHint from '../../../../../components/dashboard/PipelineGamingHint';
 
 interface CaptureGuideProps {
   isValidating: boolean;
@@ -319,6 +320,14 @@ const CaptureGuide: React.FC<CaptureGuideProps> = ({
           </div>
         </button>
 
+        {/* Gaming Hint */}
+        <div className="mt-4">
+          <PipelineGamingHint
+            points={25}
+            forgeName="Forge Nutritionnelle"
+            message="Scannez votre repas pour gagner des points"
+          />
+        </div>
       </div>
     </GlassCard>
   );

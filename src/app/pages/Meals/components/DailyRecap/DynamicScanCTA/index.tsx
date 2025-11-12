@@ -6,12 +6,13 @@ import SpatialIcon from '@/ui/icons/SpatialIcon';
 import { ICONS } from '@/ui/icons/registry';
 import { useFeedback } from '@/hooks/useFeedback';
 import { usePerformanceMode } from '@/system/context/PerformanceModeContext';
+import GamingPointsBadge from '@/components/dashboard/GamingPointsBadge';
 import { analyzeNutritionalContext } from './contextAnalysis';
 import { generateDynamicMessage, generateContextualMetrics } from './messageGenerator';
-import { 
-  calculateUrgencyConfig, 
-  generateUrgencyStyles, 
-  generateIconStyles, 
+import {
+  calculateUrgencyConfig,
+  generateUrgencyStyles,
+  generateIconStyles,
   generateButtonStyles,
   shouldShowParticles,
   getParticleCount
@@ -228,6 +229,16 @@ const DynamicScanCTA: React.FC<DynamicScanCTAProps> = ({
               }`}
               style={buttonStyles}
             >
+              {/* Gaming Badge - Top Right */}
+              <div className="absolute top-1 right-1">
+                <GamingPointsBadge
+                  points={25}
+                  forgeName="Forge Nutritionnelle"
+                  size="small"
+                  animated={!isPerformanceMode}
+                />
+              </div>
+
               <div className="flex items-center justify-center gap-3">
                 <SpatialIcon
                   Icon={ICONS[urgencyConfig.icon as keyof typeof ICONS]}

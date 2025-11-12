@@ -7,6 +7,7 @@ import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import RecipeCard from '../../../pages/Fridge/tabs/RecipesTab/components/RecipeCard';
 import RecipeDetailModal from '../../../pages/Fridge/tabs/RecipesTab/components/RecipeDetailModal';
+import GamingSuccessBanner from '../../../../components/dashboard/GamingSuccessBanner';
 import type { Recipe } from '../../../../domain/recipe';
 
 interface ValidationStageProps {
@@ -50,6 +51,16 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
   return (
     <>
       <div className="space-y-6">
+        {/* Gaming Success Banner - Only show when all recipes are ready */}
+        {allRecipesReady && (
+          <GamingSuccessBanner
+            points={20}
+            forgeName="Forge Culinaire"
+            title="Recettes Générées avec Succès !"
+            message={`${readyRecipes.length} recette${readyRecipes.length > 1 ? 's' : ''} prête${readyRecipes.length > 1 ? 's' : ''} à être savourée${readyRecipes.length > 1 ? 's' : ''}`}
+          />
+        )}
+
         {/* Validation Header */}
         <MotionDiv
           {...(!isPerformanceMode && {

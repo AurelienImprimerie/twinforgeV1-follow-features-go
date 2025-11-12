@@ -7,6 +7,7 @@ import DetectedFoodsCard from './DetectedFoodsCard';
 import PhotoDisplayCard from './PhotoDisplayCard';
 import ActionButtons from './ActionButtons';
 import MealProgressHeader from '../MealProgressHeader';
+import GamingSuccessBanner from '../../../../../components/dashboard/GamingSuccessBanner';
 
 interface CapturedMealPhoto {
   file: File;
@@ -75,7 +76,15 @@ const MealResultsDisplayStep: React.FC<MealResultsDisplayStepProps> = ({
         subMessage={progressSubMessage}
         celebrationActive={celebrationActive}
       />
-      
+
+      {/* Gaming Success Banner */}
+      <GamingSuccessBanner
+        points={25}
+        forgeName="Forge Nutritionnelle"
+        title="Analyse Nutritionnelle Complète !"
+        message={`${analysisResults.foods?.length || 0} aliments détectés - ${Math.round(analysisResults.total_calories)} calories`}
+      />
+
       <div>
         <CalorieHighlightCard
           totalCalories={analysisResults.total_calories}

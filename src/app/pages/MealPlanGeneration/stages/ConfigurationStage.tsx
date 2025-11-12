@@ -6,6 +6,7 @@ import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import CustomDropdown from '../../../pages/Fridge/tabs/RecipesTab/components/CustomDropdown';
 import { WEEK_COUNT_OPTIONS } from '../../../../system/store/mealPlanGenerationPipeline';
+import PipelineGamingHint from '../../../../components/dashboard/PipelineGamingHint';
 
 interface ConfigurationStageProps {
   availableInventories: any[];
@@ -198,6 +199,15 @@ const ConfigurationStage: React.FC<ConfigurationStageProps> = ({
                   </div>
                 </MotionDiv>
               )}
+            </div>
+
+            {/* Gaming Hint */}
+            <div className="flex justify-center">
+              <PipelineGamingHint
+                points={35}
+                forgeName="Forge Culinaire"
+                message="Générez un plan de repas pour gagner des points"
+              />
             </div>
 
             {/* Generate Button */}

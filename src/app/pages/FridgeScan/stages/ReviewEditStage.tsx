@@ -12,6 +12,7 @@ import InventoryItem from '../components/InventoryItem';
 import InventoryStats from '../components/InventoryStats';
 import SuggestedItemsCard from '../components/SuggestedItemsCard';
 import ReviewEditActionsCard from '../components/ReviewEditActionsCard';
+import GamingSuccessBanner from '../../../../components/dashboard/GamingSuccessBanner';
 import logger from '../../../../lib/utils/logger';
 
 interface SuggestedItem extends FridgeItem {
@@ -238,6 +239,16 @@ const ReviewEditStage: React.FC<ReviewEditStageProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Gaming Success Banner - Only show if inventory is validated */}
+      {isInventoryValidated && (
+        <GamingSuccessBanner
+          points={30}
+          forgeName="Forge Culinaire"
+          title="Inventaire Validé !"
+          message={`${safeUserEditedInventory.length} ingrédients sauvegardés avec succès`}
+        />
+      )}
+
       {/* Header de Révision */}
       <ReviewEditHeader
         inventoryCount={filteredInventory.length}

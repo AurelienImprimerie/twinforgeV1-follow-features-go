@@ -6,6 +6,7 @@ import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import SkeletonBase from '../../../../ui/components/skeletons/SkeletonBase';
+import GamingSuccessBanner from '../../../../components/dashboard/GamingSuccessBanner';
 import type { MealPlan } from '../../../../system/store/mealPlanGenerationPipeline/types';
 
 interface ValidationStageProps {
@@ -37,6 +38,14 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Gaming Success Banner */}
+      <GamingSuccessBanner
+        points={35}
+        forgeName="Forge Culinaire"
+        title="Plan Alimentaire Généré !"
+        message={`${weekCount} semaine${weekCount > 1 ? 's' : ''} de repas planifiés - ${totalMeals} repas au total`}
+      />
+
       {/* Validation Header */}
       <MotionDiv
         {...(!isPerformanceMode && {

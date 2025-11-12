@@ -4,6 +4,7 @@ import { usePerformanceMode } from '../../../../system/context/PerformanceModeCo
 import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
+import GamingSuccessBanner from '../../../../components/dashboard/GamingSuccessBanner';
 import type { ShoppingListCandidate } from '../../../../system/store/shoppingListGenerationPipeline/types';
 
 interface ValidationStageProps {
@@ -55,6 +56,14 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Gaming Success Banner */}
+      <GamingSuccessBanner
+        points={15}
+        forgeName="Forge Culinaire"
+        title="Liste de Courses Générée !"
+        message={`${shoppingList.totalItems} articles répartis en ${shoppingList.categories.length} catégories`}
+      />
+
       {/* Header with CTA */}
       <MotionDiv
         {...(!isPerformanceMode && {

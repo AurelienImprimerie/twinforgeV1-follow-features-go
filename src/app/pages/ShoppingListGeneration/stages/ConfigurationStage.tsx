@@ -5,6 +5,7 @@ import GlassCard from '../../../../ui/cards/GlassCard';
 import SpatialIcon from '../../../../ui/icons/SpatialIcon';
 import { ICONS } from '../../../../ui/icons/registry';
 import CustomDropdown from '../../../pages/Fridge/tabs/RecipesTab/components/CustomDropdown';
+import PipelineGamingHint from '../../../../components/dashboard/PipelineGamingHint';
 
 interface ConfigurationStageProps {
   availableMealPlans: any[];
@@ -223,6 +224,15 @@ const ConfigurationStage: React.FC<ConfigurationStageProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Gaming Hint */}
+            <div className="flex justify-center">
+              <PipelineGamingHint
+                points={15}
+                forgeName="Forge Culinaire"
+                message="Générez une liste de courses pour gagner des points"
+              />
             </div>
 
             {/* Generate Button */}
