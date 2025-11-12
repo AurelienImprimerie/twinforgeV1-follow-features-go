@@ -39,7 +39,7 @@ export function useGamificationProgress() {
       }
     },
     enabled: !!session?.user?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     refetchInterval: false,
     refetchOnWindowFocus: true,
     retry: false

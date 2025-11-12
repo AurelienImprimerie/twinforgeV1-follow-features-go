@@ -30,6 +30,11 @@ export const queryClient = new QueryClient({
         // CRITICAL: Allow refetch on mount for real-time data that changes frequently
         const queryKey = query.queryKey;
 
+        // Always refetch gamification data on mount (user just earned XP)
+        if (queryKey.includes('gamification-progress')) return true;
+        if (queryKey.includes('xp-events')) return true;
+        if (queryKey.includes('daily-actions')) return true;
+
         // Always refetch meals data on mount (user just saved a meal)
         if (queryKey.includes('meals-today')) return true;
         if (queryKey.includes('meals-week')) return true;

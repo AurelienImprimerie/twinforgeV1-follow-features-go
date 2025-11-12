@@ -426,10 +426,10 @@ const MealScanFlowPage: React.FC = () => {
               timestamp: new Date().toISOString()
             });
 
-            // Invalidate gamification queries to refresh gaming widget immediately
-            await queryClient.invalidateQueries({ queryKey: ['gamification-progress'] });
-            await queryClient.invalidateQueries({ queryKey: ['xp-events'] });
-            await queryClient.invalidateQueries({ queryKey: ['daily-actions'] });
+            // Force refetch gamification queries to refresh gaming widget immediately
+            await queryClient.refetchQueries({ queryKey: ['gamification-progress'], type: 'active' });
+            await queryClient.refetchQueries({ queryKey: ['xp-events'], type: 'active' });
+            await queryClient.refetchQueries({ queryKey: ['daily-actions'], type: 'active' });
           }
         } catch (xpError) {
           logger.warn('MEAL_SCAN_SAVE', 'Failed to award XP for meal scan', {
