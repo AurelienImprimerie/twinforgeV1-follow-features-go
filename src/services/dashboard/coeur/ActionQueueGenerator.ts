@@ -1,6 +1,5 @@
 import { supabase } from '@/system/supabase/client';
 import logger from '@/lib/utils/logger';
-import timezoneService from '@/system/services/TimezoneService';
 import type { BrainContext } from '@/system/head/types';
 import type { TransformationObjective, DashboardAction } from '../DashboardIntelligenceService';
 import type { AdaptiveScores } from './AdaptiveScoreCalculator';
@@ -40,7 +39,7 @@ class ActionQueueGenerator {
       tokensRequired: 0,
       condition: async (context, objective, scores, streak, userId) => {
         if (!context.training.lastSessionDate) return false;
-        const userNow = await timezoneService.convertToUserTime(userId, new Date());
+        const userNow = new Date(); // TODO: Use timezone service when available
         const daysSince = Math.floor((userNow.getTime() - new Date(context.training.lastSessionDate).getTime()) / (1000 * 60 * 60 * 24));
         return daysSince >= 7;
       },
@@ -73,7 +72,7 @@ class ActionQueueGenerator {
       estimatedTimeMinutes: 1,
       tokensRequired: 0,
       condition: async (context, objective, scores, streak, userId) => {
-        const userNow = await timezoneService.convertToUserTime(userId, new Date());
+        const userNow = new Date(); // TODO: Use timezone service when available
         const now = userNow.getHours();
         return now >= 11 && now <= 14 && context.nutrition.scanFrequency < 21;
       },

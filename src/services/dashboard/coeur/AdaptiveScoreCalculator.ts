@@ -1,5 +1,4 @@
 import logger from '@/lib/utils/logger';
-import timezoneService from '@/system/services/TimezoneService';
 import { startOfWeek } from 'date-fns';
 import type { BrainContext } from '@/system/head/types';
 import type { TransformationObjective } from '../DashboardIntelligenceService';
@@ -213,7 +212,7 @@ class AdaptiveScoreCalculator {
     let details = '';
 
     // Get week start in user's timezone
-    const userNow = await timezoneService.convertToUserTime(userId, new Date());
+    const userNow = new Date(); // TODO: Use timezone service when available
     const weekStartDate = startOfWeek(userNow, { weekStartsOn: 0 }); // Sunday = 0
 
     const weeklySessionsCount = training.recentSessions.filter(session => {
@@ -238,7 +237,7 @@ class AdaptiveScoreCalculator {
     }
 
     if (training.lastSessionDate) {
-      const userNow = await timezoneService.convertToUserTime(userId, new Date());
+      const userNow = new Date(); // TODO: Use timezone service when available
       const daysSinceLastSession = Math.floor(
         (userNow.getTime() - new Date(training.lastSessionDate).getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -356,7 +355,7 @@ class AdaptiveScoreCalculator {
       }
 
       if (bodyScan.lastScanDate) {
-        const userNow = await timezoneService.convertToUserTime(userId, new Date());
+        const userNow = new Date(); // TODO: Use timezone service when available
         const daysSinceLastScan = Math.floor(
           (userNow.getTime() - new Date(bodyScan.lastScanDate).getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -593,7 +592,7 @@ class AdaptiveScoreCalculator {
   }
 
   private async calculateMuscleGainProgress(context: BrainContext, objective: TransformationObjective, userId: string): Promise<number> {
-    const userNow = await timezoneService.convertToUserTime(userId, new Date());
+    const userNow = new Date(); // TODO: Use timezone service when available
     const weekStartDate = startOfWeek(userNow, { weekStartsOn: 0 });
 
     const trainingFrequency = context.user?.training?.recentSessions?.filter(session => {
@@ -637,7 +636,7 @@ class AdaptiveScoreCalculator {
   }
 
   private async calculateStrengthProgress(context: BrainContext, objective: TransformationObjective, userId: string): Promise<number> {
-    const userNow = await timezoneService.convertToUserTime(userId, new Date());
+    const userNow = new Date(); // TODO: Use timezone service when available
     const weekStartDate = startOfWeek(userNow, { weekStartsOn: 0 });
 
     const trainingFrequency = context.user?.training?.recentSessions?.filter(session => {
@@ -679,7 +678,7 @@ class AdaptiveScoreCalculator {
   private async calculateBodyRecompositionProgress(context: BrainContext, userId: string): Promise<number> {
     let progress = 0;
 
-    const userNow = await timezoneService.convertToUserTime(userId, new Date());
+    const userNow = new Date(); // TODO: Use timezone service when available
     const weekStartDate = startOfWeek(userNow, { weekStartsOn: 0 });
 
     const weeklySessionsCount = context.user?.training?.recentSessions?.filter(session => {
@@ -697,7 +696,7 @@ class AdaptiveScoreCalculator {
   }
 
   private async determineTrend(currentScore: number, context: BrainContext, userId: string): Promise<'improving' | 'stable' | 'declining'> {
-    const userNow = await timezoneService.convertToUserTime(userId, new Date());
+    const userNow = new Date(); // TODO: Use timezone service when available
     const recentActivityDays = [
       context.user?.training?.lastSessionDate,
       context.user?.nutrition?.lastScanDate,
