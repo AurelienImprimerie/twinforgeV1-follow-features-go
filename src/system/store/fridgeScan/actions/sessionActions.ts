@@ -241,6 +241,17 @@ export const createSessionActions = (
         timestamp: new Date().toISOString()
       });
 
+      // Award XP for fridge scan
+      try {
+        const { useForgeXpRewards } = await import('../../../../hooks/useForgeXpRewards');
+        const { awardForgeXpSilently } = useForgeXpRewards();
+        await awardForgeXpSilently('fridge_scan');
+      } catch (error) {
+        logger.warn('FRIDGE_SCAN_PIPELINE', 'Failed to award XP for fridge scan', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+
       // Update meal plan store with new inventory
       try {
         const { useMealPlanStore } = await import('../../mealPlanStore');

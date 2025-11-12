@@ -350,6 +350,19 @@ export const createGenerationActions = (
               costUsd: parsedData.cost_usd
             });
 
+            // Award XP for recipe generation
+            (async () => {
+              try {
+                const { useForgeXpRewards } = await import('../../../../hooks/useForgeXpRewards');
+                const { awardForgeXpSilently } = useForgeXpRewards();
+                await awardForgeXpSilently('recipe_generated');
+              } catch (error) {
+                logger.warn('RECIPE_GENERATION_PIPELINE', 'Failed to award XP for recipe', {
+                  error: error instanceof Error ? error.message : 'Unknown error'
+                });
+              }
+            })();
+
             set({
               loadingState: 'idle',
               loadingMessage: '',

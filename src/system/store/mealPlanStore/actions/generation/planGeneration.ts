@@ -324,6 +324,17 @@ export const generateMealPlanCore = async (
       timestamp: new Date().toISOString()
     });
 
+    // Award XP for meal plan generation
+    try {
+      const { useForgeXpRewards } = await import('../../../../../hooks/useForgeXpRewards');
+      const { awardForgeXpSilently } = useForgeXpRewards();
+      await awardForgeXpSilently('meal_plan_generated');
+    } catch (error) {
+      logger.warn('MEAL_PLAN_STORE', 'Failed to award XP for meal plan', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
     return mealPlanData;
 
   } catch (error) {

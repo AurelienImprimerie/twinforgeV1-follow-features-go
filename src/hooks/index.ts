@@ -28,3 +28,5 @@ export { useRecipeImageRealtime } from './useRecipeImageRealtime';
 export { useActiveGenerationSession } from './useActiveGenerationSession';
 export { useHideFastingForBulking } from './useHideFastingForBulking';
 export { useBrainInitialization } from './useBrainInitialization';
+export { useForgeXpRewards, FORGE_XP_REWARDS } from './useForgeXpRewards';
+export type { ForgeActionId } from './useForgeXpRewards';

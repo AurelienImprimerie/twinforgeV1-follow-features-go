@@ -445,6 +445,17 @@ export const useShoppingListGenerationPipeline = create<ShoppingListGenerationPi
         current_step: 'validation'
       });
 
+      // Award XP for shopping list generation
+      try {
+        const { useForgeXpRewards } = await import('../../../hooks/useForgeXpRewards');
+        const { awardForgeXpSilently } = useForgeXpRewards();
+        await awardForgeXpSilently('shopping_list_generated');
+      } catch (error) {
+        logger.warn('SHOPPING_LIST_PIPELINE', 'Failed to award XP for shopping list', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+
     } catch (error) {
       logger.error('SHOPPING_LIST_PIPELINE', 'Generation failed', { error });
 

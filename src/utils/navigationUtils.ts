@@ -97,3 +97,19 @@ export function scrollToElement(
     scrollFn();
   }
 }
+
+/**
+ * Scroll to section by ID (alias for scrollToElement for backwards compatibility)
+ * @param sectionId - Section ID (without #)
+ * @param options - Scroll options
+ */
+export function scrollToSection(
+  sectionId: string,
+  options?: {
+    smooth?: boolean;
+    block?: ScrollLogicalPosition;
+    delay?: number;
+  }
+) {
+  scrollToElement(sectionId, options);
+}

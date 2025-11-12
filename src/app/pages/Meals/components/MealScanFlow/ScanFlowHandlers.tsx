@@ -446,6 +446,22 @@ export function useScanFlowHandlers({
         progress: 100,
         currentStep: 'results'
       }));
+
+      // Award XP for meal scan
+      try {
+        const { useForgeXpRewards } = await import('../../../../../hooks/useForgeXpRewards');
+        const { awardForgeXpSilently } = useForgeXpRewards();
+
+        if (scanFlowState.capturedPhoto) {
+          await awardForgeXpSilently('meal_scan');
+        }
+
+        if (scanFlowState.scannedProducts.length > 0) {
+          await awardForgeXpSilently('barcode_scan');
+        }
+      } catch (error) {
+        console.error('[MealScan] Failed to award XP:', error);
+      }
       
       onSuccess();
 
