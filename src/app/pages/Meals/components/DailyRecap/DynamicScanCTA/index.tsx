@@ -208,7 +208,7 @@ const DynamicScanCTA: React.FC<DynamicScanCTAProps> = ({
             <GamingPointsBadge
               points={25}
               forgeName="Forge Nutritionnelle"
-              size="small"
+              size="large"
               animated={!isPerformanceMode}
             />
           </div>
