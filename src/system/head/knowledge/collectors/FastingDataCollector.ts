@@ -87,11 +87,15 @@ export class FastingDataCollector {
 
     const { data: sessions, error } = await this.supabase
       .from('fasting_sessions')
-      .select('id, start_time, end_time, target_hours, actual_duration_hours, protocol_id, status, outcome_quality')
+      .select(`
+        id, start_time, end_time, target_hours, actual_duration_hours,
+        protocol_id, status, outcome_quality, metabolic_phase_reached,
+        is_scientifically_valid, completion_percentage, notes, created_at
+      `)
       .eq('user_id', userId)
       .gte('start_time', sixtyDaysAgo.toISOString())
       .order('start_time', { ascending: false })
-      .limit(30);
+      .limit(50);
 
     if (error) {
       logger.error('FASTING_DATA_COLLECTOR', 'Failed to load fasting sessions', {
@@ -105,16 +109,30 @@ export class FastingDataCollector {
       return [];
     }
 
-    return sessions.map((session) => ({
-      id: session.id,
-      startTime: session.start_time,
-      endTime: session.end_time,
-      targetDuration: session.target_hours || 0,
-      actualDuration: session.actual_duration_hours || null,
-      protocol: session.protocol_id || 'custom',
-      status: session.status as 'in_progress' | 'completed' | 'cancelled',
-      quality: session.outcome_quality || null
-    }));
+    return sessions.map((session) => {
+      const actualDuration = session.actual_duration_hours || null;
+      const targetDuration = session.target_hours || 0;
+      const completion = actualDuration && targetDuration
+        ? Math.round((actualDuration / targetDuration) * 100)
+        : session.completion_percentage || null;
+
+      return {
+        id: session.id,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        createdAt: session.created_at,
+        targetDuration,
+        actualDuration,
+        protocol: session.protocol_id || 'custom',
+        status: session.status as 'in_progress' | 'completed' | 'cancelled',
+        quality: session.outcome_quality || null,
+        metabolicPhase: session.metabolic_phase_reached || null,
+        isScientificallyValid: session.is_scientifically_valid || false,
+        completionPercentage: completion,
+        notes: session.notes || null,
+        dataCompleteness: this.calculateSessionCompleteness(session)
+      };
+    });
   }
 
   /**
@@ -123,7 +141,10 @@ export class FastingDataCollector {
   private async getCurrentSession(userId: string): Promise<FastingSessionSummary | null> {
     const { data: session, error } = await this.supabase
       .from('fasting_sessions')
-      .select('id, start_time, end_time, target_hours, actual_duration_hours, protocol_id, status')
+      .select(`
+        id, start_time, end_time, target_hours, actual_duration_hours,
+        protocol_id, status, notes, created_at
+      `)
       .eq('user_id', userId)
       .eq('status', 'in_progress')
       .order('start_time', { ascending: false })
@@ -134,19 +155,48 @@ export class FastingDataCollector {
       return null;
     }
 
-    // Calculate current duration
     const startTime = new Date(session.start_time);
     const now = new Date();
-    const currentDuration = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60); // hours
+    const currentDuration = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    const targetDuration = session.target_hours || 0;
+    const completion = targetDuration > 0
+      ? Math.round((currentDuration / targetDuration) * 100)
+      : 0;
 
     return {
       id: session.id,
       startTime: session.start_time,
       endTime: session.end_time,
-      targetDuration: session.target_duration_hours || 0,
-      actualDuration: Math.round(currentDuration * 10) / 10, // 1 decimal place
-      protocol: session.protocol || 'custom',
-      status: 'in_progress'
+      createdAt: session.created_at,
+      targetDuration,
+      actualDuration: Math.round(currentDuration * 10) / 10,
+      protocol: session.protocol_id || 'custom',
+      status: 'in_progress',
+      quality: null,
+      metabolicPhase: null,
+      isScientificallyValid: false,
+      completionPercentage: completion,
+      notes: session.notes || null,
+      dataCompleteness: 50
     };
+  }
+
+  /**
+   * Calculate session data completeness score
+   */
+  private calculateSessionCompleteness(session: any): number {
+    let score = 0;
+    let maxScore = 8;
+
+    if (session.start_time) score++;
+    if (session.end_time) score++;
+    if (session.actual_duration_hours) score++;
+    if (session.outcome_quality) score++;
+    if (session.metabolic_phase_reached) score++;
+    if (session.is_scientifically_valid !== null) score++;
+    if (session.completion_percentage) score++;
+    if (session.notes) score++;
+
+    return Math.round((score / maxScore) * 100);
   }
 }

@@ -63,10 +63,17 @@ export class TrainingDataCollector {
   private async getRecentSessions(userId: string): Promise<TrainingSessionSummary[]> {
     const { data, error } = await this.supabase
       .from('training_sessions')
-      .select('id, created_at, discipline, prescription, duration_actual_min, status, completed_at, feedback')
+      .select(`
+        id, created_at, updated_at, discipline, prescription,
+        duration_actual_min, status, completed_at,
+        feedback, location_id, notes,
+        started_at, effort_perceived, enjoyment,
+        rpe_avg, custom_name, session_type,
+        exercises_total, exercises_completed, context
+      `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50);
 
     if (error) {
       logger.error('TRAINING_COLLECTOR', 'Failed to get sessions', { error });
@@ -74,11 +81,12 @@ export class TrainingDataCollector {
     }
 
     return (data || []).map(session => {
-      // Extract exercise count and details from prescription JSONB
       let exerciseCount = 0;
       let exercises: TrainingExerciseDetail[] = [];
       let sessionName: string | undefined;
       let expectedRpe: number | undefined;
+      let totalVolume = 0;
+      let totalSets = 0;
 
       if (session.prescription && typeof session.prescription === 'object') {
         const prescription = session.prescription as any;
@@ -87,35 +95,77 @@ export class TrainingDataCollector {
 
         if (Array.isArray(prescription.exercises)) {
           exerciseCount = prescription.exercises.length;
-          // Extract detailed exercises
-          exercises = prescription.exercises.map((ex: any) => ({
-            id: ex.id || '',
-            name: ex.name || 'Unknown',
-            sets: ex.sets || 0,
-            reps: ex.reps || 0,
-            load: ex.load,
-            rest: ex.rest || 0,
-            muscleGroups: ex.muscleGroups || [],
-            coachTips: ex.coachTips || [],
-            executionCues: ex.executionCues || []
-          }));
+          exercises = prescription.exercises.map((ex: any) => {
+            const sets = ex.sets || 0;
+            const reps = ex.reps || 0;
+            const load = Array.isArray(ex.load) ? ex.load[0] : ex.load;
+            totalSets += sets;
+            if (load && reps) {
+              totalVolume += sets * reps * load;
+            }
+            return {
+              id: ex.id || '',
+              name: ex.name || 'Unknown',
+              sets,
+              reps,
+              load,
+              rest: ex.rest || 0,
+              muscleGroups: ex.muscleGroups || [],
+              coachTips: ex.coachTips || [],
+              executionCues: ex.executionCues || []
+            };
+          });
         } else if (Array.isArray(prescription.blocks)) {
-          // For endurance sessions with blocks
           exerciseCount = prescription.blocks.length;
         }
       }
 
+      const feedback = session.feedback as any || {};
+      const context = session.context as any || {};
+
       return {
         sessionId: session.id,
         date: session.created_at,
-        discipline: session.discipline || 'force',
-        exerciseCount,
+        updatedAt: session.updated_at,
+        discipline: session.discipline || session.session_type || 'force',
+        exerciseCount: session.exercises_total || exerciseCount,
         duration: session.duration_actual_min || 0,
+        expectedDuration: 0,
         completed: session.status === 'completed' || !!session.completed_at,
-        avgRPE: session.feedback?.avg_rpe,
+        completionPercentage: session.exercises_total > 0
+          ? Math.round((session.exercises_completed / session.exercises_total) * 100)
+          : 100,
+        avgRPE: session.rpe_avg || feedback.avg_rpe,
+        expectedRpe,
+        difficultyRating: session.effort_perceived,
         exercises,
-        sessionName,
-        expectedRpe
+        sessionName: session.custom_name || sessionName,
+        totalVolume,
+        totalSets,
+        locationId: session.location_id,
+        equipmentDetected: [],
+        weatherConditions: {
+          temperature: context.weather?.temperature,
+          humidity: context.weather?.humidity,
+          conditions: context.weather?.conditions
+        },
+        startTimestamp: session.started_at,
+        endTimestamp: session.completed_at,
+        notes: session.notes,
+        energyLevelPre: context.energy_level_pre,
+        energyLevelPost: context.energy_level_post,
+        moodPre: context.mood_pre,
+        moodPost: context.mood_post,
+        injuriesNoted: [],
+        modificationsMade: [],
+        feedback: {
+          avgRpe: session.rpe_avg || feedback.avg_rpe,
+          difficulty: session.effort_perceived,
+          enjoyment: session.enjoyment,
+          musclesSoreness: feedback.muscles_soreness || [],
+          technicalDifficulties: feedback.technical_difficulties || [],
+          motivationLevel: feedback.motivation_level
+        }
       };
     });
   }

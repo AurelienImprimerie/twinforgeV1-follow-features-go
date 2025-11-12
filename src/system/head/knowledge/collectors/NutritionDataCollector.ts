@@ -105,11 +105,15 @@ export class NutritionDataCollector {
 
     const { data: meals, error } = await this.supabase
       .from('meals')
-      .select('id, meal_name, timestamp, total_kcal, meal_type, items, photo_url')
+      .select(`
+        id, meal_name, timestamp, consumed_at, created_at,
+        total_kcal, total_calories, protein_g, carbs_g, fat_g,
+        meal_type, items, photo_url
+      `)
       .eq('user_id', userId)
       .gte('timestamp', thirtyDaysAgo.toISOString())
       .order('timestamp', { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (error) {
       logger.error('NUTRITION_DATA_COLLECTOR', 'Failed to load meals', { userId, error });
@@ -121,25 +125,40 @@ export class NutritionDataCollector {
     }
 
     return meals.map((meal) => {
-      // Parse items from JSONB
       const items = this.parseMealItems(meal.items);
 
-      // Calculate totals from items if available
-      const totalProtein = items.reduce((sum, item) => sum + (item.proteins || 0), 0);
-      const totalCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
-      const totalFats = items.reduce((sum, item) => sum + (item.fats || 0), 0);
+      const itemsProtein = items.reduce((sum, item) => sum + (item.proteins || 0), 0);
+      const itemsCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
+      const itemsFats = items.reduce((sum, item) => sum + (item.fats || 0), 0);
+      const itemsCalories = items.reduce((sum, item) => sum + (item.calories || 0), 0);
+      const itemsFiber = items.reduce((sum, item) => sum + (item.fiber || 0), 0);
+      const itemsSugar = items.reduce((sum, item) => sum + (item.sugar || 0), 0);
+      const itemsSodium = items.reduce((sum, item) => sum + (item.sodium || 0), 0);
+
+      const totalProtein = meal.protein_g || itemsProtein;
+      const totalCarbs = meal.carbs_g || itemsCarbs;
+      const totalFats = meal.fat_g || itemsFats;
+      const totalCalories = meal.total_calories || meal.total_kcal || itemsCalories;
 
       return {
         id: meal.id,
         name: meal.meal_name || 'Repas',
         date: meal.timestamp,
-        calories: meal.total_kcal || 0,
+        consumedAt: meal.consumed_at || meal.timestamp,
+        createdAt: meal.created_at,
+        calories: totalCalories,
         protein: totalProtein,
         carbs: totalCarbs,
         fats: totalFats,
+        fiber: itemsFiber,
+        sugar: itemsSugar,
+        sodium: itemsSodium,
         mealType: meal.meal_type || 'unknown',
         items,
-        photoUrl: meal.photo_url || null
+        itemsCount: items.length,
+        photoUrl: meal.photo_url || null,
+        notes: undefined,
+        dataCompleteness: this.calculateMealDataCompleteness(meal, items)
       };
     });
   }
@@ -313,5 +332,25 @@ export class NutritionDataCollector {
       avgCalories: Math.round(totalCalories / meals.length),
       avgProtein: Math.round(totalProtein / meals.length)
     };
+  }
+
+  /**
+   * Calculate meal data completeness score
+   */
+  private calculateMealDataCompleteness(meal: any, items: any[]): number {
+    let score = 0;
+    let maxScore = 10;
+
+    if (meal.meal_name) score++;
+    if (meal.photo_url) score++;
+    if (meal.total_calories || meal.total_kcal) score++;
+    if (meal.protein_g) score++;
+    if (meal.carbs_g) score++;
+    if (meal.fat_g) score++;
+    if (items.length > 0) score += 2;
+    if (items.some(item => item.fiber)) score++;
+    if (meal.consumed_at) score++;
+
+    return Math.round((score / maxScore) * 100);
   }
 }

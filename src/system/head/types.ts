@@ -47,6 +47,11 @@ export interface UserKnowledge {
   bodyScan: BodyScanKnowledge;
   energy: EnergyKnowledge;
   temporal: TemporalKnowledge;
+  gamification: GamificationKnowledge;
+  prediction: PredictionKnowledge;
+  calorieBalance: CalorieBalanceKnowledge;
+  absence?: AbsenceKnowledge;
+  today: TodayData | null;
   lastUpdated: Record<ForgeType, number>;
   completeness: Record<ForgeType, number>; // 0-100%
 }
@@ -425,6 +430,7 @@ export interface BodyScanKnowledge {
   lastScanDate: string | null;
   latestMeasurements: BodyMeasurements | null;
   progressionTrend: 'improving' | 'stable' | 'declining' | null;
+  morphologyInsights: MorphologyInsightsKnowledge;
   hasData: boolean;
 }
 
@@ -433,6 +439,11 @@ export interface BodyScanSummary {
   scanDate: string;
   scanType: string;
   measurements: BodyMeasurements;
+  morphValues?: Record<string, number>;
+  limbMasses?: Record<string, number>;
+  skinTone?: any;
+  resolvedGender?: 'male' | 'female';
+  avatarVersion?: string;
 }
 
 export interface BodyMeasurements {
@@ -445,15 +456,58 @@ export interface BodyMeasurements {
   legs?: number;
 }
 
+// ============================================
+// Morphology Insights Types (AI-Generated)
+// ============================================
+
+export interface MorphologyInsightsKnowledge {
+  latestInsights: MorphInsight[];
+  recentInsights: MorphInsightSummary[];
+  lastInsightDate: string | null;
+  summary: MorphInsightsSummary | null;
+  totalInsightsGenerated: number;
+  aiModelsUsed: string[];
+  hasData: boolean;
+}
+
+export interface MorphInsight {
+  id: string;
+  title: string;
+  description: string;
+  type: 'recommendation' | 'observation' | 'achievement' | 'goal_progress';
+  category: 'morphology' | 'fitness' | 'nutrition' | 'health' | 'goals';
+  priority: 'high' | 'medium' | 'low';
+  value?: string;
+  icon: string;
+  color: string;
+  confidence: number;
+  actionable?: {
+    action: string;
+    description: string;
+  };
+}
+
+export interface MorphInsightSummary {
+  scanId: string;
+  userId: string;
+  generatedAt: string;
+  insightsCount: number;
+  highPriorityCount: number;
+  aiModel: string;
+  confidence: number;
+}
+
+export interface MorphInsightsSummary {
+  morphology_score: number;
+  goal_alignment: number;
+  health_indicators: number;
+  recommendations_count: number;
+}
+
 export interface EnergyKnowledge {
   recentActivities: BiometricActivity[];
-  connectedDevices: Array<{
-    id: string;
-    deviceType: string;
-    deviceName: string;
-    isActive: boolean;
-    lastSyncDate: string | null;
-  }>;
+  connectedDevices: ConnectedDevice[];
+  activityAnalyses: ActivityAnalysisKnowledge;
   hasWearableConnected: boolean;
   biometrics: {
     hrResting: number | null;
@@ -469,23 +523,99 @@ export interface EnergyKnowledge {
   hasData: boolean;
 }
 
+export interface ConnectedDevice {
+  id: string;
+  userId: string;
+  provider: string;
+  providerUserId: string;
+  deviceType: string;
+  deviceName: string;
+  isActive: boolean;
+  status: string;
+  scopes: string[];
+  lastSyncDate: string | null;
+  metadata: any;
+  connectedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface ActivityAnalysisKnowledge {
+  recentAnalyses: ActivityAnalysisJob[];
+  analysisByType: {
+    activityAnalysis: ActivityAnalysisJob[];
+    trendAnalysis: ActivityAnalysisJob[];
+    transcription: ActivityAnalysisJob[];
+  };
+  lastAnalysisDate: string | null;
+  analysisCount: number;
+  successRate: number;
+  averageProcessingTime: number;
+  cachedAnalysesCount: number;
+  hasData: boolean;
+}
+
+export interface ActivityAnalysisJob {
+  id: string;
+  userId: string;
+  analysisType: 'activity_analysis' | 'trend_analysis' | 'activity_transcription';
+  requestPayload: any;
+  resultPayload: any;
+  inputHash: string;
+  status: 'processing' | 'completed' | 'failed';
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BiometricActivity {
   id: string;
+  userId: string;
   timestamp: string;
+  createdAt: string;
   discipline: string;
   duration: number;
   distance: number | null;
   caloriesBurned: number;
+  notes: string | null;
+  intensity: string | null;
   hrAvg: number | null;
   hrMax: number | null;
   hrMin: number | null;
+  hrRestingPre: number | null;
+  hrRecovery1Min: number | null;
+  hrZone1Minutes: number | null;
+  hrZone2Minutes: number | null;
+  hrZone3Minutes: number | null;
+  hrZone4Minutes: number | null;
+  hrZone5Minutes: number | null;
   hrvPreActivity: number | null;
   hrvPostActivity: number | null;
+  hrvAvgOvernight: number | null;
   vo2maxEstimated: number | null;
   trainingLoadScore: number | null;
   recoveryScore: number | null;
   fatigueLevel: number | null;
-  wearableDeviceId: string;
+  efficiencyScore: number | null;
+  avgPace: string | null;
+  avgSpeedKmh: number | null;
+  elevationGainMeters: number | null;
+  elevationLossMeters: number | null;
+  avgCadenceRpm: number | null;
+  maxCadenceRpm: number | null;
+  avgPowerWatts: number | null;
+  maxPowerWatts: number | null;
+  normalizedPower: number | null;
+  sleepQualityScore: number | null;
+  sleepDurationHours: number | null;
+  stressLevelPre: number | null;
+  bodyBatteryPre: number | null;
+  wearableDeviceId: string | null;
+  wearableActivityId: string | null;
+  wearableSyncedAt: string | null;
+  dataCompletenessScore: number | null;
+  gpsAccuracyMeters: number | null;
+  sensorQualityScore: number | null;
   weatherConditions: any | null;
   perceivedEffort: number | null;
 }
@@ -523,6 +653,165 @@ export interface AvailabilityWindow {
   endHour: number;
   label: string;
   isPreferred: boolean;
+}
+
+export interface GamificationKnowledge {
+  currentLevel: number;
+  currentXp: number;
+  xpToNextLevel: number;
+  totalXpEarned: number;
+  levelUpCount: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  lastActivityDate: string | null;
+  lastLevelUpAt: string | null;
+
+  currentLevelInfo: {
+    name: string;
+    description: string | null;
+    color: string;
+    isMajorMilestone: boolean;
+  } | null;
+
+  nextLevelInfo: {
+    name: string;
+    xpRequired: number;
+  } | null;
+
+  recentXpEvents: Array<{
+    eventType: string;
+    eventCategory: string;
+    finalXp: number;
+    multiplier: number;
+    eventDate: string;
+  }>;
+
+  xpStats: {
+    last7Days: number;
+    last30Days: number;
+    averagePerDay: number;
+    topCategory: string | null;
+  };
+
+  weightHistory: Array<{
+    weight: number;
+    delta: number | null;
+    isMilestone: boolean;
+    date: string;
+  }>;
+
+  hasData: boolean;
+}
+
+export interface PredictionKnowledge {
+  hasPrediction: boolean;
+  activePrediction: {
+    predictedDate: string;
+    confidenceScore: number;
+    daysToTarget: number;
+    weeklyTrend: number;
+    weightToGo: number;
+    scenarios: {
+      optimistic: string;
+      pessimistic: string;
+    };
+  } | null;
+  milestones: Array<{
+    type: string;
+    weight: number;
+    predictedDate: string;
+    status: string;
+    varianceDays: number;
+  }>;
+  influenceFactors: {
+    activityScore: number;
+    consistencyScore: number;
+    caloricBalanceScore: number;
+    overallScore: number;
+  } | null;
+  recommendations: string[];
+  predictionHistory: {
+    totalPredictions: number;
+    averageConfidence: number;
+    lastPredictionDate: string | null;
+  };
+  hasData: boolean;
+}
+
+export interface CalorieBalanceKnowledge {
+  caloriesIn: number;
+  caloriesOut: number;
+  caloriesBalance: number;
+  dailyTarget: number;
+  remainingCalories: number;
+  percentageOfTarget: number;
+  calorieBreakdown: {
+    meals: number;
+    snacks: number;
+    drinks: number;
+  };
+  activityBreakdown: {
+    bmr: number;
+    training: number;
+    activities: number;
+    neat: number;
+  };
+  macros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  status: 'deficit' | 'maintenance' | 'surplus';
+  lastMealTime: string | null;
+  lastActivityTime: string | null;
+  hasData: boolean;
+}
+
+// ============================================
+// Absence & Reconciliation Types
+// ============================================
+
+export interface AbsenceKnowledge {
+  hasActiveAbsence: boolean;
+  currentAbsence: {
+    daysAbsent: number;
+    startDate: string;
+    status: string;
+    estimatedXp: number;
+  } | null;
+
+  pendingRewards: {
+    totalPendingXp: number;
+    rewardsCount: number;
+    oldestRewardDate: string | null;
+    expiringRewardsCount: number;
+  };
+
+  recentReconciliation: {
+    hasRecent: boolean;
+    reconciliationDate: string | null;
+    weightDelta: number;
+    awardedXp: number;
+    coherenceScore: number;
+    wasPositiveProgress: boolean;
+  } | null;
+
+  absenceHistory: {
+    totalAbsences90Days: number;
+    averageAbsenceDuration: number;
+    longestAbsence: number;
+    lastAbsenceDate: string | null;
+  };
+
+  recoveryStatus: {
+    needsWeightUpdate: boolean;
+    needsBodyScan: boolean;
+    needsAvatarUpdate: boolean;
+    daysSinceLastWeight: number;
+    daysSinceLastScan: number | null;
+  };
+
+  hasData: boolean;
 }
 
 // ============================================

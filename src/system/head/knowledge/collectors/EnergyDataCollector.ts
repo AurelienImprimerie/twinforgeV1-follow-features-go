@@ -66,7 +66,8 @@ export class EnergyDataCollector {
   }
 
   /**
-   * Collect recent activities with wearable data (last 30 days)
+   * Collect recent activities (last 30 days)
+   * Includes ALL activities, with or without wearable data
    */
   private async collectRecentActivities(userId: string): Promise<BiometricActivity[]> {
     const thirtyDaysAgo = new Date();
@@ -76,27 +77,55 @@ export class EnergyDataCollector {
       .from('activities')
       .select(`
         id,
+        user_id,
         timestamp,
+        created_at,
         type,
         duration_min,
         distance_meters,
         calories_est,
+        notes,
+        intensity,
         hr_avg,
         hr_max,
         hr_min,
+        hr_resting_pre,
+        hr_recovery_1min,
+        hr_zone1_minutes,
+        hr_zone2_minutes,
+        hr_zone3_minutes,
+        hr_zone4_minutes,
+        hr_zone5_minutes,
         hrv_pre_activity,
         hrv_post_activity,
+        hrv_avg_overnight,
         vo2max_estimated,
         training_load_score,
         recovery_score,
         fatigue_index,
+        efficiency_score,
+        avg_pace,
+        avg_speed_kmh,
+        elevation_gain_meters,
+        elevation_loss_meters,
+        avg_cadence_rpm,
+        max_cadence_rpm,
+        avg_power_watts,
+        max_power_watts,
+        normalized_power,
+        sleep_quality_score,
+        sleep_duration_hours,
+        stress_level_pre,
+        body_battery_pre,
         wearable_device_id,
-        notes,
-        intensity
+        wearable_activity_id,
+        wearable_synced_at,
+        data_completeness_score,
+        gps_accuracy_meters,
+        sensor_quality_score
       `)
       .eq('user_id', userId)
       .gte('timestamp', thirtyDaysAgo.toISOString())
-      .not('wearable_device_id', 'is', null)
       .order('timestamp', { ascending: false })
       .limit(50);
 
@@ -111,21 +140,52 @@ export class EnergyDataCollector {
 
     return activities.map((activity) => ({
       id: activity.id,
+      userId: activity.user_id,
       timestamp: activity.timestamp,
+      createdAt: activity.created_at,
       discipline: activity.type || 'unknown',
       duration: activity.duration_min || 0,
       distance: activity.distance_meters || null,
       caloriesBurned: activity.calories_est || 0,
+      notes: activity.notes || null,
+      intensity: activity.intensity || null,
       hrAvg: activity.hr_avg || null,
       hrMax: activity.hr_max || null,
       hrMin: activity.hr_min || null,
+      hrRestingPre: activity.hr_resting_pre || null,
+      hrRecovery1Min: activity.hr_recovery_1min || null,
+      hrZone1Minutes: activity.hr_zone1_minutes || null,
+      hrZone2Minutes: activity.hr_zone2_minutes || null,
+      hrZone3Minutes: activity.hr_zone3_minutes || null,
+      hrZone4Minutes: activity.hr_zone4_minutes || null,
+      hrZone5Minutes: activity.hr_zone5_minutes || null,
       hrvPreActivity: activity.hrv_pre_activity || null,
       hrvPostActivity: activity.hrv_post_activity || null,
+      hrvAvgOvernight: activity.hrv_avg_overnight || null,
       vo2maxEstimated: activity.vo2max_estimated || null,
       trainingLoadScore: activity.training_load_score || null,
       recoveryScore: activity.recovery_score || null,
       fatigueLevel: activity.fatigue_index || null,
-      wearableDeviceId: activity.wearable_device_id,
+      efficiencyScore: activity.efficiency_score || null,
+      avgPace: activity.avg_pace || null,
+      avgSpeedKmh: activity.avg_speed_kmh || null,
+      elevationGainMeters: activity.elevation_gain_meters || null,
+      elevationLossMeters: activity.elevation_loss_meters || null,
+      avgCadenceRpm: activity.avg_cadence_rpm || null,
+      maxCadenceRpm: activity.max_cadence_rpm || null,
+      avgPowerWatts: activity.avg_power_watts || null,
+      maxPowerWatts: activity.max_power_watts || null,
+      normalizedPower: activity.normalized_power || null,
+      sleepQualityScore: activity.sleep_quality_score || null,
+      sleepDurationHours: activity.sleep_duration_hours || null,
+      stressLevelPre: activity.stress_level_pre || null,
+      bodyBatteryPre: activity.body_battery_pre || null,
+      wearableDeviceId: activity.wearable_device_id || null,
+      wearableActivityId: activity.wearable_activity_id || null,
+      wearableSyncedAt: activity.wearable_synced_at || null,
+      dataCompletenessScore: activity.data_completeness_score || null,
+      gpsAccuracyMeters: activity.gps_accuracy_meters || null,
+      sensorQualityScore: activity.sensor_quality_score || null,
       weatherConditions: null,
       perceivedEffort: activity.intensity || null
     }));
@@ -136,14 +196,37 @@ export class EnergyDataCollector {
    */
   private async collectConnectedDevices(userId: string): Promise<Array<{
     id: string;
+    userId: string;
+    provider: string;
+    providerUserId: string;
     deviceType: string;
     deviceName: string;
     isActive: boolean;
+    status: string;
+    scopes: string[];
     lastSyncDate: string | null;
+    metadata: any;
+    connectedAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
   }>> {
     const { data: devices, error } = await this.supabase
       .from('connected_devices')
-      .select('id, device_type, display_name, status, last_sync_at')
+      .select(`
+        id,
+        user_id,
+        provider,
+        provider_user_id,
+        device_type,
+        display_name,
+        status,
+        scopes,
+        last_sync_at,
+        metadata,
+        connected_at,
+        created_at,
+        updated_at
+      `)
       .eq('user_id', userId)
       .eq('status', 'connected');
 
@@ -153,10 +236,19 @@ export class EnergyDataCollector {
 
     return devices.map((device) => ({
       id: device.id,
+      userId: device.user_id,
+      provider: device.provider || 'unknown',
+      providerUserId: device.provider_user_id || '',
       deviceType: device.device_type || 'other',
       deviceName: device.display_name || 'Unknown Device',
       isActive: device.status === 'connected',
-      lastSyncDate: device.last_sync_at
+      status: device.status || 'unknown',
+      scopes: Array.isArray(device.scopes) ? device.scopes : [],
+      lastSyncDate: device.last_sync_at,
+      metadata: device.metadata || null,
+      connectedAt: device.connected_at || null,
+      createdAt: device.created_at || null,
+      updatedAt: device.updated_at || null
     }));
   }
 

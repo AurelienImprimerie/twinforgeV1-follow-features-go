@@ -276,12 +276,12 @@ export class CacheManager {
       },
       {
         forge: 'body-scan',
-        events: ['body_scans'],
+        events: ['body_scans', 'ai_morphology_insights'],
         ttl: DEFAULT_TTLS['body-scan']
       },
       {
         forge: 'energy',
-        events: ['activity_sessions', 'wearable_data'],
+        events: ['activities', 'activity_sessions', 'wearable_data', 'connected_devices', 'ai_analysis_jobs'],
         ttl: DEFAULT_TTLS.energy
       },
       {
