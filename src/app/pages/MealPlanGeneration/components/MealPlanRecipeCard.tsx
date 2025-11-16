@@ -110,7 +110,7 @@ const MealPlanRecipeCard: React.FC<MealPlanRecipeCardProps> = ({
       })}
       onClick={onClick}
       className={`rounded-xl overflow-hidden transition-all duration-200 ${
-        onClick && isGenerated ? 'cursor-pointer hover:scale-[1.005]' : ''
+        onClick && isGenerated ? 'cursor-pointer' : ''
       }`}
       style={{
         background: isGenerated

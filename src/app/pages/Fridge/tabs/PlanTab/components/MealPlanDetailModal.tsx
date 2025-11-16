@@ -310,7 +310,7 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                   <button
                                     key={mealType}
                                     onClick={() => handleMealClick(meal, mealType, day.date)}
-                                    className="w-full text-left rounded-lg overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                    className="w-full text-left rounded-lg overflow-hidden transition-all"
                                     style={{
                                       background: 'rgba(139, 92, 246, 0.1)',
                                       border: '1px solid rgba(139, 92, 246, 0.2)'
@@ -318,11 +318,12 @@ const MealPlanDetailModal: React.FC<MealPlanDetailModalProps> = ({
                                   >
                                     {/* Meal Image */}
                                     {meal.imageUrl ? (
-                                      <div className="w-full h-24 overflow-hidden">
+                                      <div className="w-full h-32 overflow-hidden">
                                         <img
                                           src={meal.imageUrl}
                                           alt={meal.mealName}
-                                          className="w-full h-full object-cover"
+                                          className="w-full h-full object-contain"
+                                          style={{ backgroundColor: 'rgba(139, 92, 246, 0.05)' }}
                                         />
                                       </div>
                                     ) : (
