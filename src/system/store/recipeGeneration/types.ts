@@ -16,6 +16,11 @@ export interface RecipeGenerationConfig {
   recipeCount: number;
 }
 
+export interface RecipeGenerationCostInfo {
+  tokensConsumed: number;
+  estimatedCost: string; // formatted USD string like "$0.05"
+}
+
 export interface RecipeGenerationPipelineState {
   // Pipeline state
   currentStep: RecipeGenerationStep;
@@ -30,6 +35,9 @@ export interface RecipeGenerationPipelineState {
 
   // Data state
   recipeCandidates: Recipe[];
+
+  // Cost tracking
+  costInfo: RecipeGenerationCostInfo | null;
 
   // Loading states
   loadingState: 'idle' | 'generating' | 'streaming';

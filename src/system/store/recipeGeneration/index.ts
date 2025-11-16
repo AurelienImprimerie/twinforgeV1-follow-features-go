@@ -18,6 +18,7 @@ export const useRecipeGenerationPipeline = create<RecipeGenerationPipelineState>
       currentSessionId: null,
       simulatedOverallProgress: 0,
       recipeCandidates: [],
+      costInfo: null,
       loadingState: 'idle',
       loadingMessage: '',
       steps: RECIPE_GENERATION_STEPS,

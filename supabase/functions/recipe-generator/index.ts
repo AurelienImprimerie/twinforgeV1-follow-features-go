@@ -429,7 +429,10 @@ async function streamRecipesFromOpenAI(prompt: string, userId: string, cacheKey:
             model: 'gpt-5-mini',
             messages: [{ role: 'user', content: prompt }],
             max_completion_tokens: 15000,
-            stream: true
+            stream: true,
+            stream_options: {
+              include_usage: true
+            }
           })
         });
 
@@ -549,6 +552,25 @@ async function streamRecipesFromOpenAI(prompt: string, userId: string, cacheKey:
         }
 
         // Calculate costs and send completion event
+        // If OpenAI didn't return tokens, calculate intelligent fallback based on actual content
+        if (totalTokens.input === 0 && totalTokens.output === 0) {
+          // Estimate input tokens: ~0.75 tokens per character for prompts
+          totalTokens.input = Math.ceil(prompt.length * 0.75);
+
+          // Estimate output tokens: count JSON characters in all recipes
+          const allRecipesJson = JSON.stringify(allRecipes);
+          totalTokens.output = Math.ceil(allRecipesJson.length * 0.75);
+
+          console.log('RECIPE_GENERATOR', 'OpenAI did not return usage tokens - using intelligent fallback', {
+            user_id: userId,
+            estimated_input_tokens: totalTokens.input,
+            estimated_output_tokens: totalTokens.output,
+            prompt_length: prompt.length,
+            response_length: allRecipesJson.length,
+            timestamp: new Date().toISOString()
+          });
+        }
+
         const costUsd = (totalTokens.input * 0.25 / 1000000) + (totalTokens.output * 2.00 / 1000000);
         const processingTime = Date.now() - startTime;
 

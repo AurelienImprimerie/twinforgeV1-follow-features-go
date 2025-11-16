@@ -28,7 +28,7 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
   onExit
 }) => {
   const { isPerformanceMode } = usePerformanceMode();
-  const { loadingState } = useRecipeGenerationPipeline();
+  const { loadingState, costInfo } = useRecipeGenerationPipeline();
   const MotionDiv = isPerformanceMode ? 'div' : motion.div;
   const [showRecipeDetailModal, setShowRecipeDetailModal] = useState(false);
   const [selectedRecipeForDetail, setSelectedRecipeForDetail] = useState<Recipe | null>(null);
@@ -106,7 +106,7 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
                   <h2 className="text-2xl font-bold text-white mb-1">
                     {isStreaming ? 'Génération en Cours...' : 'Vos Recettes sont Prêtes !'}
                   </h2>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <p className="text-white/70">
                       {isStreaming
                         ? `${readyRecipes.length} / ${recipes.length} recette${recipes.length > 1 ? 's' : ''} générée${recipes.length > 1 ? 's' : ''}`
@@ -117,6 +117,14 @@ const ValidationStage: React.FC<ValidationStageProps> = ({
                       <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-400/20 border border-green-400/30">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                         <span className="text-green-400 text-xs font-medium">En création</span>
+                      </div>
+                    )}
+                    {!isStreaming && costInfo && (
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400/20 border border-blue-400/30">
+                        <SpatialIcon Icon={ICONS.Coins} size={14} className="text-blue-400" />
+                        <span className="text-blue-400 text-xs font-medium">
+                          {costInfo.tokensConsumed} tokens utilisés ({costInfo.estimatedCost})
+                        </span>
                       </div>
                     )}
                   </div>

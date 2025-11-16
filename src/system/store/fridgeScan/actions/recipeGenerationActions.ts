@@ -610,35 +610,37 @@ export const createRecipeGenerationActions = (
               isActive: false
             });
 
-            // Award XP for recipe generation (async IIFE)
+            // Award XP for recipe generation using Supabase RPC directly (no React Hooks)
             (async () => {
               try {
-                const { useUserStore } = await import('../../userStore');
-                const userId = useUserStore.getState().session?.user?.id;
+                const { supabase } = await import('../../../supabase/client');
+                const { data: { user } } = await supabase.auth.getUser();
 
-                if (userId && totalRecipesReceived > 0) {
-                  const { gamificationService } = await import('../../../../services/dashboard/coeur');
-                  await gamificationService.awardRecipeGeneratedXp(userId, {
-                    sessionId: state.currentSessionId,
-                    recipesGenerated: totalRecipesReceived,
-                    timestamp: new Date().toISOString()
+                if (user && totalRecipesReceived > 0) {
+                  // Call the Supabase RPC function directly to award XP
+                  const { error: xpError } = await supabase.rpc('award_forge_xp', {
+                    p_user_id: user.id,
+                    p_action: 'recipe_generated',
+                    p_source: 'fridge_scan'
                   });
 
-                  logger.info('FRIDGE_SCAN_PIPELINE', 'XP awarded for recipe generation', {
-                    sessionId: state.currentSessionId,
-                    recipesGenerated: totalRecipesReceived,
-                    xpAwarded: 20,
-                    timestamp: new Date().toISOString()
-                  });
-
-                  // Force refetch gamification queries to refresh gaming widget immediately
-                  const { queryClient } = await import('../../../../app/providers/AppProviders');
-                  await queryClient.refetchQueries({ queryKey: ['gamification-progress'], type: 'active' });
-                  await queryClient.refetchQueries({ queryKey: ['xp-events'], type: 'active' });
-                  await queryClient.refetchQueries({ queryKey: ['daily-actions'], type: 'active' });
+                  if (xpError) {
+                    logger.warn('FRIDGE_SCAN_PIPELINE', 'Failed to award XP for fridge scan', {
+                      error: xpError.message,
+                      sessionId: state.currentSessionId,
+                      timestamp: new Date().toISOString()
+                    });
+                  } else {
+                    logger.info('FRIDGE_SCAN_PIPELINE', 'XP awarded for recipe generation', {
+                      sessionId: state.currentSessionId,
+                      recipesGenerated: totalRecipesReceived,
+                      userId: user.id,
+                      timestamp: new Date().toISOString()
+                    });
+                  }
                 }
               } catch (xpError) {
-                logger.warn('FRIDGE_SCAN_PIPELINE', 'Failed to award XP for recipe generation', {
+                logger.warn('FRIDGE_SCAN_PIPELINE', 'Failed to award XP for fridge scan', {
                   error: xpError instanceof Error ? xpError.message : 'Unknown error',
                   sessionId: state.currentSessionId,
                   timestamp: new Date().toISOString()

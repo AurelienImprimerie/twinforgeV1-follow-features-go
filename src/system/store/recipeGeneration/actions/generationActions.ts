@@ -347,8 +347,17 @@ export const createGenerationActions = (
 
             logger.info('RECIPE_GENERATION_PIPELINE', 'Recipe generation completed', {
               processingTimeMs: parsedData.processing_time_ms,
-              costUsd: parsedData.cost_usd
+              costUsd: parsedData.cost_usd,
+              tokensConsumed: parsedData.tokens_consumed
             });
+
+            // Store cost information
+            const costInfo = parsedData.tokens_consumed && parsedData.cost_usd
+              ? {
+                  tokensConsumed: parsedData.tokens_consumed,
+                  estimatedCost: `$${parseFloat(parsedData.cost_usd).toFixed(4)}`
+                }
+              : null;
 
             // Award XP for recipe generation using Supabase RPC
             (async () => {
@@ -385,7 +394,8 @@ export const createGenerationActions = (
             set({
               loadingState: 'idle',
               loadingMessage: '',
-              simulatedOverallProgress: 100
+              simulatedOverallProgress: 100,
+              costInfo
             });
           } catch (error) {
             logger.error('RECIPE_GENERATION_PIPELINE', 'Error parsing complete event', {
