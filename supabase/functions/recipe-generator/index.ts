@@ -93,12 +93,37 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString()
       });
 
+      // Consume tokens for cache hit (reduced rate - covers server costs)
+      // Fixed cost: 15 tokens = 0.015$ (no OpenAI cost, just server/bandwidth)
+      const CACHE_HIT_COST_USD = 0.003; // Equivalent to 15 tokens at x5 margin
+      const requestId = crypto.randomUUID();
+      await consumeTokensAtomic(supabase, {
+        userId: user_id,
+        edgeFunctionName: 'recipe-generator',
+        operationType: 'recipe_generation_cache',
+        openaiModel: 'cached',
+        openaiCostUsd: CACHE_HIT_COST_USD,
+        metadata: {
+          cache_hit: true,
+          cache_key: cacheKey,
+          recipes_count: cachedResult.result_payload.recipes?.length || 0
+        }
+      }, requestId);
+
+      console.log('RECIPE_GENERATOR', 'Cache hit tokens consumed', {
+        user_id,
+        tokens_charged: 15,
+        cost_usd: CACHE_HIT_COST_USD,
+        cache_key: cacheKey,
+        timestamp: new Date().toISOString()
+      });
+
       // Stream cached recipes one by one
       return streamCachedRecipes(cachedResult.result_payload.recipes, startTime);
     }
 
-    // Check token balance before OpenAI call (estimate ~30 tokens for recipe generation)
-    const estimatedTokens = 30;
+    // Check token balance before OpenAI call (estimate ~80 tokens for recipe generation with safety buffer)
+    const estimatedTokens = 80;
     const tokenCheck = await checkTokenBalance(supabase, user_id, estimatedTokens);
 
     if (!tokenCheck.hasEnoughTokens) {
@@ -533,22 +558,48 @@ async function streamRecipesFromOpenAI(prompt: string, userId: string, cacheKey:
         }
 
         // If still no recipes, use fitness fallback
+        let usedFallbackRecipes = false;
         if (allRecipes.length === 0) {
           console.log('RECIPE_GENERATOR', 'Using fitness fallback recipes', {
             user_id: userId,
             timestamp: new Date().toISOString()
           });
 
+          usedFallbackRecipes = true;
           const fallbackRecipes = generateFitnessFallbackRecipes(inventory, preferences);
           for (const recipe of fallbackRecipes) {
             // Generate unique ID for fitness fallback recipes
             recipe.id = crypto.randomUUID();
             recipeCount++;
             allRecipes.push(recipe);
-            
+
             const recipeEvent = `event: recipe\ndata: ${JSON.stringify(recipe)}\n\n`;
             controller.enqueue(encoder.encode(recipeEvent));
           }
+
+          // Charge reduced tokens for algorithmic recipe generation (no AI)
+          const FALLBACK_RECIPE_COST_USD = 0.007; // 35 tokens at x5 margin
+          const fallbackRequestId = crypto.randomUUID();
+          await consumeTokensFn(supabase, {
+            userId: userId,
+            edgeFunctionName: 'recipe-generator',
+            operationType: 'recipe_generation_fallback',
+            openaiModel: 'algorithmic',
+            openaiCostUsd: FALLBACK_RECIPE_COST_USD,
+            metadata: {
+              recipes_count: fallbackRecipes.length,
+              fallback_reason: 'no_ai_response',
+              inventory_count: inventory.length
+            }
+          }, fallbackRequestId);
+
+          console.log('RECIPE_GENERATOR', 'Fallback recipes tokens consumed', {
+            user_id: userId,
+            tokens_charged: 35,
+            recipes_count: fallbackRecipes.length,
+            cost_usd: FALLBACK_RECIPE_COST_USD,
+            timestamp: new Date().toISOString()
+          });
         }
 
         // Calculate costs and send completion event
@@ -616,30 +667,32 @@ async function streamRecipesFromOpenAI(prompt: string, userId: string, cacheKey:
           updated_at: new Date().toISOString()
         });
 
-        // Consume tokens after successful generation
-        const requestId = crypto.randomUUID();
-        const tokenResult = await consumeTokensFn(supabase, {
-          userId: userId,
-          edgeFunctionName: 'recipe-generator',
-          operationType: 'recipe_generation',
-          openaiModel: 'gpt-5-mini',
-          openaiInputTokens: totalTokens.input,
-          openaiOutputTokens: totalTokens.output,
-          openaiCostUsd: costUsd,
-          metadata: {
-            recipes_count: allRecipes.length,
-            processing_time_ms: processingTime,
-            has_preferences: !!preferences,
-            has_filters: !!filters
-          }
-        }, requestId);
+        // Consume tokens after successful generation (skip if fallback was already charged)
+        if (!usedFallbackRecipes) {
+          const requestId = crypto.randomUUID();
+          const tokenResult = await consumeTokensFn(supabase, {
+            userId: userId,
+            edgeFunctionName: 'recipe-generator',
+            operationType: 'recipe_generation',
+            openaiModel: 'gpt-5-mini',
+            openaiInputTokens: totalTokens.input,
+            openaiOutputTokens: totalTokens.output,
+            openaiCostUsd: costUsd,
+            metadata: {
+              recipes_count: allRecipes.length,
+              processing_time_ms: processingTime,
+              has_preferences: !!preferences,
+              has_filters: !!filters
+            }
+          }, requestId);
 
-        if (!tokenResult.success) {
-          console.error('❌ [RECIPE_GENERATOR] Token consumption failed', {
-            userId,
-            error: tokenResult.error,
-            requestId
-          });
+          if (!tokenResult.success) {
+            console.error('❌ [RECIPE_GENERATOR] Token consumption failed', {
+              userId,
+              error: tokenResult.error,
+              timestamp: new Date().toISOString()
+            });
+          }
         }
 
         console.log('RECIPE_GENERATOR', 'Streaming completed', {

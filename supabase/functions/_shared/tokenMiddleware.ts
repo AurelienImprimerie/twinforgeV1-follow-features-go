@@ -274,10 +274,15 @@ export async function consumeTokensAtomic(
       tokensToConsume = convertUsdToTokens(request.openaiCostUsd);
     } else {
       const estimatedCosts: Record<string, number> = {
-        "image-generation": 15,
+        "image-generation": 75,  // Updated: $0.015 * 5 = 75 tokens
+        "recipe_image_generation": 75,  // AI image generation
+        "recipe_image_generation_cache": 15,  // Cache hit
+        "recipe_image_stock_fallback": 25,  // Stock image fallback
         "audio-transcription": 10,
         "voice-realtime": 100,
         "chat-completion": 20,
+        "recipe_generation": 80,  // Updated: realistic estimate with buffer
+        "recipe_generation_cache": 15,  // Cache hit
         "body-scan-analysis": 150,
         "meal-analysis": 100,
         "training-analysis": 120,

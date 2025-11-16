@@ -127,6 +127,32 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString()
       });
 
+      // Consume tokens for cache hit (reduced rate - covers server costs)
+      // Fixed cost: 15 tokens = 0.015$ (no OpenAI cost, just server/bandwidth/storage)
+      const CACHE_HIT_COST_USD = 0.003; // Equivalent to 15 tokens at x5 margin
+      const requestId = crypto.randomUUID();
+      await consumeTokensAtomic(supabase, {
+        userId: user_id,
+        edgeFunctionName: 'image-generator',
+        operationType: 'recipe_image_generation_cache',
+        openaiModel: 'cached',
+        openaiCostUsd: CACHE_HIT_COST_USD,
+        metadata: {
+          cache_hit: true,
+          recipe_id: recipe_id,
+          image_signature: image_signature,
+          cached_method: cachedResult.result_payload.generation_method
+        }
+      }, requestId);
+
+      console.log('IMAGE_GENERATOR', 'Cache hit tokens consumed', {
+        user_id,
+        recipe_id,
+        tokens_charged: 15,
+        cost_usd: CACHE_HIT_COST_USD,
+        timestamp: new Date().toISOString()
+      });
+
       // Update recipes table with cached image URL for persistence
       await supabase
         .from('recipes')
@@ -139,6 +165,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         ...cachedResult.result_payload,
         cache_hit: true,
+        tokens_consumed: 15,
         processing_time_ms: Date.now() - startTime
       }), {
         headers: {
@@ -172,10 +199,12 @@ Deno.serve(async (req) => {
     const imageResult = await generateImageWithFallback(recipe_details, image_signature, supabase, recipe_id);
     const processingTime = Date.now() - startTime;
 
-    // TOKEN CONSUMPTION - Only consume tokens if AI generation was used
+    // TOKEN CONSUMPTION - Charge for both AI and stock images
+    const requestId = crypto.randomUUID();
+
     if (imageResult.method === 'gpt_image_1' && imageResult.cost > 0) {
-      const requestId = crypto.randomUUID();
-await consumeTokensAtomic(supabase, {
+      // AI generation - full cost
+      await consumeTokensAtomic(supabase, {
         userId: user_id,
         edgeFunctionName: 'image-generator',
         operationType: 'recipe_image_generation',
@@ -189,7 +218,7 @@ await consumeTokensAtomic(supabase, {
           image_url: imageResult.url,
           generation_method: imageResult.method
         }
-      });
+      }, requestId);
 
       console.log('IMAGE_GENERATOR', 'Tokens consumed', {
         user_id,
@@ -199,10 +228,30 @@ await consumeTokensAtomic(supabase, {
         generation_method: imageResult.method
       });
     } else {
-      console.log('IMAGE_GENERATOR', 'No tokens consumed - stock image fallback', {
+      // Stock image fallback - reduced cost (covers curation, storage, bandwidth)
+      const STOCK_IMAGE_COST_USD = 0.005; // 25 tokens at x5 margin
+      await consumeTokensAtomic(supabase, {
+        userId: user_id,
+        edgeFunctionName: 'image-generator',
+        operationType: 'recipe_image_stock_fallback',
+        openaiModel: 'stock_curation',
+        openaiCostUsd: STOCK_IMAGE_COST_USD,
+        metadata: {
+          recipe_id,
+          recipe_title: recipe_details.title,
+          image_url: imageResult.url,
+          generation_method: imageResult.method,
+          fallback_reason: imageResult.method.replace('stock_fallback_', '')
+        }
+      }, requestId);
+
+      console.log('IMAGE_GENERATOR', 'Stock image tokens consumed', {
         user_id,
         recipe_id,
-        generation_method: imageResult.method
+        cost_usd: STOCK_IMAGE_COST_USD,
+        tokens_charged: 25,
+        generation_method: imageResult.method,
+        fallback_reason: imageResult.method.replace('stock_fallback_', '')
       });
     }
 
@@ -213,7 +262,7 @@ await consumeTokensAtomic(supabase, {
       cache_hit: false,
       generation_method: imageResult.method,
       recipe_id: recipe_id,
-      tokens_consumed: imageResult.method === 'gpt_image_1' ? estimatedTokens : 0
+      tokens_consumed: imageResult.method === 'gpt_image_1' ? estimatedTokens : 25
     };
 
     // UPDATE RECIPES TABLE - Critical for persistence with AI-generated images
