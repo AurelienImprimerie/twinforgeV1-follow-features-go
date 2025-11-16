@@ -1,7 +1,7 @@
 import { useMarkActionCompleted } from './coeur/useDailyActionsTracking';
 import { useToast } from '@/ui/components/ToastProvider';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePointsNotificationStore } from '@/system/store/pointsNotificationStore';
+import { usePointsNotificationStore } from '@/system/store/coeur/pointsNotificationStore';
 import { ICONS } from '@/ui/icons/registry';
 
 /**

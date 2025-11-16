@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import SpatialIcon from '../icons/SpatialIcon';
-import { ICONS } from '../icons/registry';
-import { usePointsNotificationStore } from '../../system/store/pointsNotificationStore';
-import { useFeedback } from '../../hooks';
-import { success as successSound } from '../../audio/effects/statusSounds';
-import { notif as notifSound } from '../../audio/effects/interactionSounds';
-import { Haptics } from '../../utils/haptics';
-import logger from '../../lib/utils/logger';
+import SpatialIcon from '@/ui/icons/SpatialIcon';
+import { ICONS } from '@/ui/icons/registry';
+import { usePointsNotificationStore } from '@/system/store/coeur/pointsNotificationStore';
+import { useFeedback } from '@/hooks';
+import { success as successSound } from '@/audio/effects/statusSounds';
+import { notif as notifSound } from '@/audio/effects/interactionSounds';
+import { Haptics } from '@/utils/haptics';
+import logger from '@/lib/utils/logger';
 
 const PointsGainNotification: React.FC = () => {
   const { currentNotification, dismissCurrentNotification } = usePointsNotificationStore();

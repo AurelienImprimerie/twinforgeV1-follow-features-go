@@ -16,7 +16,7 @@ import logger from '../../lib/utils/logger';
 import { BackgroundManager } from '../../ui/components/BackgroundManager';
 import PerformanceRecommendationAlert, { usePerformanceRecommendationAlert } from '../../ui/components/PerformanceRecommendationAlert';
 import { BrainInitializer } from './BrainInitializer';
-import PointsGainNotification from '../../ui/components/PointsGainNotification';
+import PointsGainNotification from '../../components/dashboard/widgets/coeur/notifications/PointsGainNotification';
 
 // Create QueryClient with enhanced cache configuration for persistence
 // Export for use in stores and services
